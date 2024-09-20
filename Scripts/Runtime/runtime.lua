@@ -1,0 +1,2 @@
+require 'middleclass'
+require 'BaseWindow'
