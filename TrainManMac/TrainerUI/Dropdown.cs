@@ -57,6 +57,11 @@ public class Dropdown: NSPopUpButton, IDropdown {
     }
     
     public void SetSelectedIndex(int index) {
+        if (index < 0 || index >= _items.Count || !_items.ContainsKey(index)) {
+            SetTitle("");
+            return;
+        }
+        
         SetTitle(_items[index]);
         
         _callback.Call(index, _items[index]);
