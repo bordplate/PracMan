@@ -30,6 +30,10 @@ public class AttachViewController: NSViewController {
         };
         
         Window.Center();
+        
+        Window.DidBecomeKey += (sender, e) => {
+            ((AppDelegate)NSApplication.SharedApplication.Delegate).ActivateMenu();
+        };
     }
     
     public override void ViewDidLoad() {
@@ -123,6 +127,8 @@ public class AttachViewController: NSViewController {
                     alert.RunSheetModal(Window);
                     
                     _attachButton.Title = "Attach";
+
+                    target.Stop();
                     
                     return;
                 }

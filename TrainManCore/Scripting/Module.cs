@@ -49,12 +49,22 @@ public class Module {
 
         (_state["OnLoad"] as LuaFunction)?.Call();
     }
+    
+    public void Exit() {
+        (_state["OnUnload"] as LuaFunction)?.Call();
+        
+        TrainerDelegate.CloseAllWindows();
+
+        _target.Stop();
+    }
 
     public void SetupState() {
         _state["Module"] = this;
         _state["print"] = (string text) => {
             Console.WriteLine(text);
         };
+
+        _state["AddMenu"] = TrainerDelegate.AddMenu;
 
         _state["Alert"] = (string text) => {
             if (_target.CanInlineNotify()) {
@@ -65,13 +75,16 @@ public class Module {
         };
 
         _state["Settings"] = new Settings(Path.Combine(ModulePath, "settings.user.toml"), true);
+        
+        _state["UINT_MAX"] = uint.MaxValue;
+        _state["INT_MAX"] = int.MaxValue;
 
         _state["Ratchetron"] = _target;
         _state["Target"] = _target;
     }
 
-    public IWindow CreateWindow() {
-        return TrainerDelegate.CreateWindow();
+    public IWindow CreateWindow(bool isMainWindow = false) {
+        return TrainerDelegate.CreateWindow(this, isMainWindow);
     }
     
     public static string ModulesRoot() {

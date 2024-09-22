@@ -6,7 +6,7 @@ TrainerWindow = class("TrainerWindow", BaseWindow)
 function TrainerWindow:initialize()
     self.game = Game()
     
-    BaseWindow.initialize(self)
+    BaseWindow.initialize(self, true)
     
     self:Show()
     

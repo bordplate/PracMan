@@ -1,4 +1,5 @@
 using NLua;
+using TrainManCore.Scripting;
 using TrainManCore.Scripting.UI;
 
 namespace TrainMan;
@@ -9,10 +10,18 @@ public class TrainerViewController: NSViewController, IWindow {
     LuaTable? _luaContext;
 
     private bool _viewLoaded = false;
+    private bool _isMainWindow = false;
 
     private NSStackView _stackView;
+
+    private Module _module;
+
+    private NSMenu _menu;
     
-    public TrainerViewController() : base() {
+    public TrainerViewController(bool isMainWindow, Module module) : base() {
+        _module = module;
+        _isMainWindow = isMainWindow;
+
         Window = new NSWindow(
             CGRect.Empty, 
             NSWindowStyle.Titled | NSWindowStyle.Closable | NSWindowStyle.Miniaturizable | NSWindowStyle.Resizable, 
@@ -23,6 +32,12 @@ public class TrainerViewController: NSViewController, IWindow {
         };
         
         Window.Center();
+        
+        Window.DidBecomeKey += (sender, e) => {
+            if (_isMainWindow) {
+                ((TrainerModule)_module.TrainerDelegate).ActivateMenu();
+            }
+        };
     }
     
     public override void ViewDidLoad() {
@@ -48,6 +63,14 @@ public class TrainerViewController: NSViewController, IWindow {
         }
     }
     
+    public override void ViewDidDisappear() {
+        base.ViewDidDisappear();
+
+        if (_isMainWindow) {
+            _module.Exit();
+        }
+    }
+    
     public void SetLuaContext(LuaTable luaContext) {
         _luaContext = luaContext;
         
@@ -66,7 +89,7 @@ public class TrainerViewController: NSViewController, IWindow {
     }
 
     public void Close() {
-        throw new NotImplementedException();
+        Window.Close();
     }
 
     public IContainer AddColumn() {
