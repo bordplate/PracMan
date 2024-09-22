@@ -62,4 +62,36 @@ public abstract class Container: NSStackView, IContainer {
         
         return row;
     }
+    
+    public IContainer AddColumn(LuaFunction callback) {
+        var column = new Column();
+        AddArrangedSubview(column);
+        
+        ConstrainElement(column);
+        
+        // Make column fill from top to bottom
+        AddConstraints(NSLayoutConstraint.FromVisualFormat("V:|-10-[column]-10-|", NSLayoutFormatOptions.None, null, new NSDictionary("column", column)));
+        
+        callback.Call(column);
+        
+        return column;
+    }
+    
+    public ISpacer AddSpacer() {
+        var spacer = new Spacer();
+        AddArrangedSubview(spacer);
+        
+        ConstrainElement(spacer);
+        
+        return spacer;
+    }
+    
+    public IStepper AddStepper(int minValue, int maxValue, int step, LuaFunction callback) {
+        var stepper = new Stepper(minValue, maxValue, step, callback);
+        AddArrangedSubview(stepper);
+        
+        ConstrainElement(stepper);
+        
+        return stepper;
+    }
 }

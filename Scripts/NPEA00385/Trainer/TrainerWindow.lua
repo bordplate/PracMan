@@ -84,6 +84,8 @@ function TrainerWindow:OnLoad()
             self.game:TurnOnDrekSkip()
         end)
         
+        column:AddSpacer()
+        
         column:AddButton("Reset all Gold Bolts", function()
             self.game:ResetAllGoldBolts()
         end)
@@ -91,6 +93,8 @@ function TrainerWindow:OnLoad()
         column:AddButton("Unlock all Gold", function()
             self.game:UnlockAllGoldBolts()
         end)
+        
+        column:AddSpacer()
 
         column:AddButton("Reset Shoot SPs", function()
             self.game:SetShootSkillPoints(true)
@@ -99,6 +103,8 @@ function TrainerWindow:OnLoad()
         column:AddButton("Setup Shoot SPs", function()
             self.game:SetShootSkillPoints(false)
         end)
+        
+        column:AddSpacer()
 
         column:AddButton("Setup All Missions", function()
             self.game:SetupAllMissions()
