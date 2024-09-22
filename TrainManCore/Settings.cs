@@ -52,7 +52,7 @@ public class Settings {
     /// <param name="fallback">The fallback value to return if the key is not found. Default value is default(T).</param>
     /// <param name="silent">If false, saves the fallback to the config, if true, does not save the fallback value to the config file.</param>
     /// <returns>The value associated with the specified key, or the fallback value if the key is not found.</returns>
-    public T Get<T>(string key, T fallback = default, bool silent = false) {
+    public T Get<T>(string key, T fallback = default, bool silent = true) {
         string[] keys = key.Split('.');
         TomlTable current = _settingsTable;
 
@@ -78,7 +78,7 @@ public class Settings {
         }
     }
 
-    public float GetFloat(string key, float fallback, bool silent = false) {
+    public float GetFloat(string key, float fallback, bool silent = true) {
         return Get<float>(key, fallback, silent);
     }
 
