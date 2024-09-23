@@ -1,3 +1,6 @@
+using TrainManCore.Scripting;
+using TrainManCore.Target;
+
 namespace TrainMan;
 
 [Register("AppDelegate")]
@@ -7,6 +10,8 @@ public class AppDelegate : NSApplicationDelegate {
     public NSMenu MainMenu;
     public NSMenuItem WindowsMenu;
     public NSMenuItem HelpMenu;
+    
+    private Dictionary<Target, Dictionary<string, object>> _activeTargets = new();
     
     public override void DidFinishLaunching(NSNotification notification) {
         CreateMenu();
@@ -18,7 +23,14 @@ public class AppDelegate : NSApplicationDelegate {
     {
         if (!hasVisibleWindows)
         {
-            AttachViewController.Window.MakeKeyAndOrderFront(this);
+            // We activate the mod loader if there are active targets, otherwise we show the attach view controller
+            if (_activeTargets.Count > 0) {
+                foreach (var target in _activeTargets.Keys) {
+                    ModLoaderFor(target).Window.MakeKeyAndOrderFront(this);
+                }
+            } else {
+                AttachViewController.Window.MakeKeyAndOrderFront(this);
+            }
         }
         
         return true;
@@ -124,7 +136,76 @@ public class AppDelegate : NSApplicationDelegate {
         NSApplication.SharedApplication.WindowsMenu = WindowsMenu.Submenu;
         NSApplication.SharedApplication.HelpMenu = HelpMenu.Submenu;
     }
+    
+    public void AddTarget(Target target) {
+        if (!_activeTargets.ContainsKey(target)) {
+            _activeTargets[target] = new();
+        }
+    }
+    
+    public void RemoveTarget(Target target) {
+        if (_activeTargets.ContainsKey(target)) {
+            _activeTargets.Remove(target);
+        }
+    }
+    
+    public void AddModuleForTarget(Module module, Target target) {
+        if (!_activeTargets.ContainsKey(target)) {
+            throw new Exception("Target not found.");
+        }
+        
+        if (!_activeTargets[target].ContainsKey("Modules")) {
+            _activeTargets[target]["Modules"] = new List<Module>();
+        }
+        
+        var modules = _activeTargets[target]["Modules"] as List<Module>;
+        modules.Add(module);
+    }
+    
+    public void RemoveModuleForTarget(Module module, Target target) {
+        if (!_activeTargets.ContainsKey(target)) {
+            throw new Exception("Target not found.");
+        }
+        
+        if (!_activeTargets[target].ContainsKey("Modules")) {
+            throw new Exception("No modules found for target.");
+        }
+        
+        var modules = _activeTargets[target]["Modules"] as List<Module>;
+        modules.Remove(module);
+    }
+    
+    public List<Module>? ModulesForTarget(Target target) {
+        if (!_activeTargets.ContainsKey(target)) {
+            return null;
+        }
+        
+        if (!_activeTargets[target].ContainsKey("Modules")) {
+            return new();
+        }
+        
+        return _activeTargets[target]["Modules"] as List<Module>;
+    }
 
+    public ModLoaderViewController ModLoaderFor(Target target) {
+        if (!_activeTargets.ContainsKey(target)) {
+            throw new Exception("Target not found.");
+        }
+        
+        if (_activeTargets[target].ContainsKey("ModLoader")) {
+            // Reopen the mod loader
+            var modLoader = _activeTargets[target]["ModLoader"] as ModLoaderViewController;
+            return modLoader;
+        } else {
+            // Create a new mod loader
+            var modLoader = new ModLoaderViewController(target);
+
+            _activeTargets[target]["ModLoader"] = modLoader;
+            
+            return modLoader;
+        }
+    }
+    
     public override void WillTerminate(NSNotification notification)
     {
         // Insert code here to tear down your application

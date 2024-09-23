@@ -1,0 +1,12 @@
+[General]
+name = "Savefile helper"
+version = "1.0"
+author = "RaCMAN Authors"
+description = "This plugin is used to help with savefile creation and management."
+
+[Patches]
+0x980500 = "tramp.bin"
+0x980600 = "lv2.bin"
+0x97C7E8 = 0x489804CB
+0x9804C8 = "inputp.bin"
+0x981000 = "input.bin"

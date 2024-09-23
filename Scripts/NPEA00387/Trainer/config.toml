@@ -1,0 +1,5 @@
+[General]
+name = "Ratchet & Clank 3 - NPEA00387 (PAL) Trainer"
+entry = "main.lua"
+autorun = true
+supported_targets = ["ps3", "rpcs3"]

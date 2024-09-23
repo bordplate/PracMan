@@ -79,6 +79,8 @@ public class Ratchetron(string ip) : Target(ip) {
     }
 
     public override bool Stop() {
+        base.Stop();
+        
         this._connected = false;
         this._udpClient?.Close();
         this._client?.Close();

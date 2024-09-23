@@ -1,9 +1,14 @@
+using System.Runtime.InteropServices.Marshalling;
 using System.Text;
 
 namespace TrainManCore.Target;
 
 public abstract class Target {
     protected string _address;
+    
+    public event Action OnStop;
+
+    public Action<Action> RunOnMainThread;
     
     public delegate void DicoveredTargetsCallback(List<string> targets);
     public delegate void AttachedCallback(bool success, string message);
@@ -25,7 +30,12 @@ public abstract class Target {
     }
 
     public abstract bool Start(AttachedCallback callback);
-    public abstract bool Stop();
+
+    public virtual bool Stop() {
+        OnStop();
+
+        return true;
+    }
 
     public abstract string GetGameTitleID();
 

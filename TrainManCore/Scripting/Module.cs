@@ -5,6 +5,8 @@ using TrainManCore.Target;
 namespace TrainManCore.Scripting;
 
 public class Module {
+    public event Action OnExit;
+    
     public string Title;
     public string ModulePath;
     public Settings Settings;
@@ -36,16 +38,10 @@ public class Module {
         if (entryFile == null) {
             throw new Exception("Entry point file not found.");
         }
-        
-        _state.LoadCLRPackage();
-        
-        // Set package path to the runtime folder and the module's folder
-        _state.DoString($"package.path = package.path .. ';{ModulesRoot()}/Runtime/?.lua;{ModulePath}/?.lua'", "set package path");
-        
-        _state.DoString(File.ReadAllText(Path.Combine(ModulesRoot(), "Runtime/runtime.lua")), "runtime.lua");
-        _state.DoString(entryFile, entry);
 
-        SetupState();
+        SetupState(_state);
+        
+        _state.DoString(entryFile, entry);
 
         (_state["OnLoad"] as LuaFunction)?.Call();
     }
@@ -55,18 +51,29 @@ public class Module {
         
         TrainerDelegate.CloseAllWindows();
 
-        _target.Stop();
+        OnExit();
     }
 
-    public void SetupState() {
-        _state["Module"] = this;
-        _state["print"] = (string text) => {
+    public void SetupState(Lua state) {
+        state.LoadCLRPackage();
+                
+        // Set package path to the runtime folder and the module's folder
+        state.DoString($"package.path = package.path .. ';{ModulesRoot()}/Runtime/?.lua;{ModulePath}/?.lua'", "set package path");
+
+        state["bytestoint"] = ByteArrayToInt;
+        state["bytestouint"] = ByteArrayToUInt;
+        state["bytestofloat"] = ByteArrayToFloat;
+        
+        state.DoString(File.ReadAllText(Path.Combine(ModulesRoot(), "Runtime/runtime.lua")), "runtime.lua");
+        
+        state["Module"] = this;
+        state["print"] = (string text) => {
             Console.WriteLine(text);
         };
 
-        _state["AddMenu"] = TrainerDelegate.AddMenu;
+        state["AddMenu"] = TrainerDelegate.AddMenu;
 
-        _state["Alert"] = (string text) => {
+        state["Alert"] = (string text) => {
             if (_target.CanInlineNotify()) {
                 _target.Notify(text);
             } else {
@@ -74,17 +81,35 @@ public class Module {
             }
         };
 
-        _state["Settings"] = new Settings(Path.Combine(ModulePath, "settings.user.toml"), true);
+        state["Settings"] = new Settings(Path.Combine(ModulePath, "settings.user.toml"), true);
         
-        _state["UINT_MAX"] = uint.MaxValue;
-        _state["INT_MAX"] = int.MaxValue;
+        state["UINT_MAX"] = uint.MaxValue;
+        state["INT_MAX"] = int.MaxValue;
 
-        _state["Ratchetron"] = _target;
-        _state["Target"] = _target;
+        state["Ratchetron"] = _target;
+        state["Target"] = _target;
     }
 
     public IWindow CreateWindow(bool isMainWindow = false) {
         return TrainerDelegate.CreateWindow(this, isMainWindow);
+    }
+    
+    public Inputs LoadInputs() {
+        var inputsControllerPath = Settings.Get<string>("General.inputs_controller", null);
+        
+        if (inputsControllerPath == null) {
+            return null;
+        }
+
+        Lua state = new Lua();
+        
+        SetupState(state);
+        
+        string entryFile = File.ReadAllText(Path.Combine(ModulePath, inputsControllerPath));
+        
+        state.DoString(entryFile, inputsControllerPath);
+        
+        return new Inputs(state);
     }
     
     public static string ModulesRoot() {
@@ -112,5 +137,17 @@ public class Module {
         }
         
         return [];
+    }
+
+    public static int ByteArrayToInt(byte[] bytes, int startIndex = 0) {
+        return BitConverter.ToInt32(bytes, startIndex);
+    }
+    
+    public static uint ByteArrayToUInt(byte[] bytes, int startIndex = 0) {
+        return BitConverter.ToUInt32(bytes, startIndex);
+    }
+    
+    public static float ByteArrayToFloat(byte[] bytes, int startIndex = 0) {
+        return BitConverter.ToSingle(bytes, startIndex);
     }
 }

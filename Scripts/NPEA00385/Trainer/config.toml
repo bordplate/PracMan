@@ -3,3 +3,4 @@ name = "Ratchet & Clank 1 - NPEA00385 (PAL) Trainer"
 entry = "main.lua"
 autorun = true
 supported_targets = ["ps3", "rpcs3"]
+inputs_controller = "inputs.lua"

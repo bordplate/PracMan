@@ -97,6 +97,8 @@ public class AttachViewController: NSViewController {
     }
 
     public void Attach() {
+        var appDelegate = (AppDelegate)NSApplication.SharedApplication.Delegate;
+        
         var targetAddress = _targetComboBox.StringValue;
 
         _attachButton.Title = "Cancel";
@@ -117,6 +119,11 @@ public class AttachViewController: NSViewController {
         }
         
         var target = CreateTargetInstance(targetAddress);
+        target.RunOnMainThread = (action) => {
+            NSApplication.SharedApplication.InvokeOnMainThread(() => {
+                action();
+            });
+        };
         
         target.Start((success, message) => {
             if (success) {
@@ -132,16 +139,58 @@ public class AttachViewController: NSViewController {
                     
                     return;
                 }
+                
+                appDelegate.AddTarget(target);
+                
+                target.OnStop += () => {
+                    appDelegate.ActivateMenu();
+                    appDelegate.RemoveTarget(target);
+                };
 
                 var modules = Module.ModulesForTitle(target.GetGameTitleID(), target);
+
+                bool atLeastOneModLoaded = false;
 
                 foreach (var module in modules) {
                     if (module.Settings.Get<bool>("General.autorun")) {
                         var trainerModule = new TrainerModule();
                         module.TrainerDelegate = trainerModule;
                         
+                        appDelegate.AddModuleForTarget(module, target);
+                        
+                        module.OnExit += () => {
+                            appDelegate.RemoveModuleForTarget(module, target);
+
+                            if (appDelegate.ModulesForTarget(target)?.Count == 0 &&
+                                !appDelegate.ModLoaderFor(target).Window.IsVisible) {
+                                target.Stop();
+                            }
+                        };
+
+                        trainerModule.AddMenu("Trainer", (menu) => {
+                            menu.AddItem("Mod loader...", () => {
+                                appDelegate.ModLoaderFor(target).Window.MakeKeyAndOrderFront(null);
+                            });
+                            
+                            if (module.Settings.Get<string>("General.inputs_controller") != "") {
+                                menu.AddItem("Input display", () => {
+                                    if (trainerModule.InputDisplayViewController == null) {
+                                        trainerModule.InputDisplayViewController = new InputDisplayViewController(module.LoadInputs());
+                                    }
+                                    
+                                    trainerModule.InputDisplayViewController.Window.MakeKeyAndOrderFront(null);
+                                });
+                            }
+                        });
+                        
                         module.Load();
+                        
+                        atLeastOneModLoaded = true;
                     }
+                }
+
+                if (!atLeastOneModLoaded) {
+                    appDelegate.ModLoaderFor(target).Window.MakeKeyAndOrderFront(null);
                 }
                 
                 Window.Close();

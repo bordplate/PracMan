@@ -24,6 +24,8 @@ public class DummyTarget(string title): Target(title) {
     }
 
     public override bool Stop() {
+        base.Stop();
+        
         return true;
     }
 

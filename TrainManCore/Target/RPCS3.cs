@@ -67,6 +67,8 @@ public class RPCS3(string slot) : Target(slot) {
     }
 
     public override bool Stop() {
+        base.Stop();
+
         MemoryWorkerStarted = false;
 
         try {
@@ -211,7 +213,9 @@ public class RPCS3(string slot) : Target(slot) {
                         WriteMemory(item.Address, item.Size, item.SetValue);
                     }
 
-                    item.Callback?.Invoke(currentValue.Reverse().ToArray());
+                    RunOnMainThread(() => {
+                        item.Callback?.Invoke(currentValue.Reverse().ToArray());
+                    });
                 }
 
                 item.LastValue = currentValue;

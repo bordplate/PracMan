@@ -1,6 +1,5 @@
 require 'TrainerWindow'
 
-print("Huh")
 
 function OnLoad()
     local trainer = TrainerWindow()

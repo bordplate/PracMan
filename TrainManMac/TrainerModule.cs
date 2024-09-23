@@ -11,6 +11,8 @@ public class TrainerModule: ITrainer {
     
     private List<IMenu> _menus = [];
     
+    public InputDisplayViewController? InputDisplayViewController;
+    
     public NSMenu MainMenu;
     public NSMenuItem WindowsMenu;
     public NSMenuItem HelpMenu;
@@ -101,5 +103,11 @@ public class TrainerModule: ITrainer {
         };
         
         alert.RunModal();
+    }
+    
+    public void RunOnMainThread(Action action) {
+        NSApplication.SharedApplication.InvokeOnMainThread(() => {
+            action();
+        });
     }
 }

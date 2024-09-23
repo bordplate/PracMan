@@ -16,6 +16,12 @@ end
 function TrainerWindow:OnLoad()
     self:SetTitle("Ratchet & Clank 1 (PAL)")
     
+    AddMenu("Debug", function(menu)
+        menu:AddItem("Shoit", function()
+            Alert("Shoit")
+        end)
+    end)
+    
     self:AddColumn(function(column)
         column:AddRow(function(row)
             row:AddLabel("Position:")
