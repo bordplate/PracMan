@@ -78,6 +78,10 @@ public class Settings {
         }
     }
 
+    public TomlTable? GetTableForSection(string section) {
+        return _settingsTable.ContainsKey(section) ? (TomlTable)_settingsTable[section] : null;
+    }
+
     public float GetFloat(string key, float fallback, bool silent = true) {
         return Get<float>(key, fallback, silent);
     }

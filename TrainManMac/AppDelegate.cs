@@ -107,12 +107,12 @@ public class AppDelegate : NSApplicationDelegate {
         MainMenu.AddItem(CreateAppMenuItem());
         
         // *** File Menu ***
-        var fileMenuItem = new NSMenuItem();
-
-        var fileMenu = new NSMenu("File");
-        fileMenuItem.Submenu = fileMenu;
-        
-        MainMenu.AddItem(fileMenuItem);
+        // var fileMenuItem = new NSMenuItem();
+        //
+        // var fileMenu = new NSMenu("File");
+        // fileMenuItem.Submenu = fileMenu;
+        //
+        // MainMenu.AddItem(fileMenuItem);
 
         // *** Edit Menu ***
         MainMenu.AddItem(CreateEditMenuItem());
@@ -187,6 +187,23 @@ public class AppDelegate : NSApplicationDelegate {
         return _activeTargets[target]["Modules"] as List<Module>;
     }
 
+    public List<Module> AllModulesForTarget(Target target) {
+        // Get all modules for a target, enabled modules should be replaced with their enabled versions
+        var allModules = Module.ModulesForTitle(target.GetGameTitleID(), target);
+        var enabledModules = ModulesForTarget(target);
+        
+        if (enabledModules == null) {
+            return allModules;
+        }
+        
+        foreach (var module in enabledModules) {
+            var index = allModules.FindIndex(m => m.ModulePath == module.ModulePath);
+            allModules[index] = module;
+        }
+        
+        return allModules;
+    }
+
     public ModLoaderViewController ModLoaderFor(Target target) {
         if (!_activeTargets.ContainsKey(target)) {
             throw new Exception("Target not found.");
@@ -204,6 +221,42 @@ public class AppDelegate : NSApplicationDelegate {
             
             return modLoader;
         }
+    }
+
+    public void EnableModForTarget(Module module, Target target) {
+        var trainerModule = new TrainerModule();
+        module.TrainerDelegate = trainerModule;
+                        
+        AddModuleForTarget(module, target);
+
+        module.OnExit += () => {
+            RemoveModuleForTarget(module, target);
+
+            if (ModulesForTarget(target)?.Count == 0 &&
+                !ModLoaderFor(target).Window.IsVisible) {
+                target.Stop();
+            }
+        };
+
+        trainerModule.AddMenu("Trainer", (menu) => {
+            menu.AddItem("Mod loader...", () => {
+                ModLoaderFor(target).Window.MakeKeyAndOrderFront(null);
+            });
+                            
+            if (module.Settings.Get<string>("General.inputs_controller", "") != "") {
+                menu.AddItem("Input display", () => {
+                    if (trainerModule.InputDisplayViewController == null) {
+                        trainerModule.InputDisplayViewController = new InputDisplayViewController(module.LoadInputs());
+                    }
+                                    
+                    trainerModule.InputDisplayViewController.Window.MakeKeyAndOrderFront(null);
+                });
+            }
+        });
+        
+        trainerModule.ActivateMenu();
+                        
+        module.Load();
     }
     
     public override void WillTerminate(NSNotification notification)

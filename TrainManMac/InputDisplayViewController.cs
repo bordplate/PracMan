@@ -169,29 +169,29 @@ public class InputDisplayView : NSView {
 
         // Draw analog sticks
         DrawAnalogStick(sprite, buttons["r3"], buttons["r3Press"], inputs.rx, inputs.ry,
-            inputs.Mask.Contains(Inputs.Buttons.r3), context);
+            inputs.Mask.Contains(Inputs.Buttons.R3), context);
         DrawAnalogStick(sprite, buttons["l3"], buttons["l3Press"], inputs.lx, inputs.ly,
-            inputs.Mask.Contains(Inputs.Buttons.l3), context);
+            inputs.Mask.Contains(Inputs.Buttons.L3), context);
 
         // Draw D-Pad buttons
-        DrawConditionalButton(sprite, buttons["dpadLeft"], inputs.Mask.Contains(Inputs.Buttons.left), context);
-        DrawConditionalButton(sprite, buttons["dpadRight"], inputs.Mask.Contains(Inputs.Buttons.right), context);
-        DrawConditionalButton(sprite, buttons["dpadUp"], inputs.Mask.Contains(Inputs.Buttons.up), context);
-        DrawConditionalButton(sprite, buttons["dpadDown"], inputs.Mask.Contains(Inputs.Buttons.down), context);
+        DrawConditionalButton(sprite, buttons["dpadLeft"], inputs.Mask.Contains(Inputs.Buttons.Left), context);
+        DrawConditionalButton(sprite, buttons["dpadRight"], inputs.Mask.Contains(Inputs.Buttons.Right), context);
+        DrawConditionalButton(sprite, buttons["dpadUp"], inputs.Mask.Contains(Inputs.Buttons.Up), context);
+        DrawConditionalButton(sprite, buttons["dpadDown"], inputs.Mask.Contains(Inputs.Buttons.Down), context);
 
         // Draw face buttons
-        DrawConditionalButton(sprite, buttons["cross"], inputs.Mask.Contains(Inputs.Buttons.cross), context);
-        DrawConditionalButton(sprite, buttons["circle"], inputs.Mask.Contains(Inputs.Buttons.circle), context);
-        DrawConditionalButton(sprite, buttons["triangle"], inputs.Mask.Contains(Inputs.Buttons.triangle), context);
-        DrawConditionalButton(sprite, buttons["square"], inputs.Mask.Contains(Inputs.Buttons.square), context);
+        DrawConditionalButton(sprite, buttons["cross"], inputs.Mask.Contains(Inputs.Buttons.Cross), context);
+        DrawConditionalButton(sprite, buttons["circle"], inputs.Mask.Contains(Inputs.Buttons.Circle), context);
+        DrawConditionalButton(sprite, buttons["triangle"], inputs.Mask.Contains(Inputs.Buttons.Triangle), context);
+        DrawConditionalButton(sprite, buttons["square"], inputs.Mask.Contains(Inputs.Buttons.Square), context);
 
         // Draw other buttons
-        DrawConditionalButton(sprite, buttons["select"], inputs.Mask.Contains(Inputs.Buttons.select), context);
-        DrawConditionalButton(sprite, buttons["start"], inputs.Mask.Contains(Inputs.Buttons.start), context);
-        DrawConditionalButton(sprite, buttons["r1"], inputs.Mask.Contains(Inputs.Buttons.r1), context);
-        DrawConditionalButton(sprite, buttons["l1"], inputs.Mask.Contains(Inputs.Buttons.l1), context);
-        DrawConditionalButton(sprite, buttons["r2"], inputs.Mask.Contains(Inputs.Buttons.r2), context);
-        DrawConditionalButton(sprite, buttons["l2"], inputs.Mask.Contains(Inputs.Buttons.l2), context);
+        DrawConditionalButton(sprite, buttons["select"], inputs.Mask.Contains(Inputs.Buttons.Select), context);
+        DrawConditionalButton(sprite, buttons["start"], inputs.Mask.Contains(Inputs.Buttons.Start), context);
+        DrawConditionalButton(sprite, buttons["r1"], inputs.Mask.Contains(Inputs.Buttons.R1), context);
+        DrawConditionalButton(sprite, buttons["l1"], inputs.Mask.Contains(Inputs.Buttons.L1), context);
+        DrawConditionalButton(sprite, buttons["r2"], inputs.Mask.Contains(Inputs.Buttons.R2), context);
+        DrawConditionalButton(sprite, buttons["l2"], inputs.Mask.Contains(Inputs.Buttons.L2), context);
     }
 
     private void DrawButton(NSImage sprite, InputPlot plot, CGContext context) {

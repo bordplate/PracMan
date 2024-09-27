@@ -9,6 +9,8 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
     private Target _target;
     private List<Module> _mods = [];
     
+    private NSTableView _modsTableView;
+    
     private NSTextField _modNameTextField;
     private NSTextField _modAuthorTextField;
     private NSTextField _modVersionTextField;
@@ -30,6 +32,8 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
         };
         
         Window.Center();
+        
+        Window.DidBecomeKey += WindowDidBecomeKey;
     }
     
     public override void ViewDidLoad() {
@@ -37,7 +41,7 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
         
         View.SetFrameSize(new CGSize(150, 150));
 
-        var tableView = new NSTableView {
+        _modsTableView = new NSTableView {
             TranslatesAutoresizingMaskIntoConstraints = false,
             UsesAlternatingRowBackgroundColors = true,
             AllowsColumnResizing = false,
@@ -58,14 +62,14 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
             Width = 100,
         };
         
-        tableView.AddColumn(checkColumn);
-        tableView.AddColumn(nameColumn);
+        _modsTableView.AddColumn(checkColumn);
+        _modsTableView.AddColumn(nameColumn);
 
         var scrollView = new NSScrollView {
             TranslatesAutoresizingMaskIntoConstraints = false,
         };
         
-        scrollView.DocumentView = tableView;
+        scrollView.DocumentView = _modsTableView;
         scrollView.BorderType = NSBorderType.BezelBorder;
         
         View.AddSubview(scrollView);
@@ -146,7 +150,6 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
         
         _modLinkTextField = new NSTextField {
             PlaceholderString = "N/A",
-            StringValue = "github.com/bordplate/TrainMan",
             DrawsBackground = false,
             Editable = false,
             Bordered = false,
@@ -240,6 +243,10 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
     }
     
     public NSView GetViewForItem(NSTableView tableView, NSTableColumn tableColumn, nint row) {
+        var appDelegate = (AppDelegate)NSApplication.SharedApplication.Delegate;
+        
+        var mod = _mods[(int)row];
+        
         if (tableColumn.Identifier == "Check") {
             var view = new NSView {
                 TranslatesAutoresizingMaskIntoConstraints = true,
@@ -250,6 +257,7 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
                 TranslatesAutoresizingMaskIntoConstraints = true,
                 Title = "",
                 BezelStyle = NSBezelStyle.RegularSquare,
+                State = mod.IsLoaded ? NSCellStateValue.On : NSCellStateValue.Off,
             };
             
             checkBox.Tag = (int)row;
@@ -277,7 +285,7 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
                 Bordered = false,
                 Editable = false,
                 Selectable = false,
-                StringValue = _mods[(int)row].Settings.Get("General.name", "N/A"),
+                StringValue = mod.Settings.Get("General.name", "N/A"),
             };
             
             cell.AddSubview(textField);
@@ -307,6 +315,11 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
         _modDescriptionTextField.StringValue = mod.Settings.Get("General.description", "");
     }
     
+    public void WindowDidBecomeKey(object? sender, EventArgs eventArgs) {
+        _mods = ((AppDelegate)NSApplication.SharedApplication.Delegate).AllModulesForTarget(_target);
+        _modsTableView.ReloadData();
+    }
+    
     public override void ViewWillDisappear() {
         base.ViewWillDisappear();
 
@@ -323,6 +336,16 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
         int row = (int)checkBox.Tag;
         bool isChecked = checkBox.State == NSCellStateValue.On;
         
-        
+        if (isChecked) {
+            ((AppDelegate)NSApplication.SharedApplication.Delegate).EnableModForTarget(_mods[row], _target);
+        } else {
+            _mods[row].Exit();
+            
+            // Replace the mod instance with a fresh one
+            var allModules = Module.ModulesForTitle(_target.GetGameTitleID(), _target);
+            var newInstance = allModules.Find(m => m.ModulePath == _mods[row].ModulePath);
+
+            _mods[row] = newInstance;
+        }
     }
 }

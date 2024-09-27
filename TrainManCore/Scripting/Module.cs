@@ -1,3 +1,5 @@
+using System.Globalization;
+using Nett;
 using NLua;
 using TrainManCore.Scripting.UI;
 using TrainManCore.Target;
@@ -9,6 +11,7 @@ public class Module {
     
     public string Title;
     public string ModulePath;
+    public bool IsLoaded;
     public Settings Settings;
 
     private Target.Target _target;
@@ -29,24 +32,54 @@ public class Module {
     public void Load() {
         string entry = Settings.Get<string>("General.entry");
         
-        if (entry == null) {
-            throw new Exception("No entry point specified in module config.");
-        }
+        if (entry != null) {
+            string entryFile = File.ReadAllText(Path.Combine(ModulePath, entry));
         
-        string entryFile = File.ReadAllText(Path.Combine(ModulePath, entry));
+            if (entryFile == null) {
+                throw new Exception("Entry point file not found.");
+            }
+
+            SetupState(_state);
         
-        if (entryFile == null) {
-            throw new Exception("Entry point file not found.");
+            _state.DoString(entryFile, entry);
+
+            (_state["OnLoad"] as LuaFunction)?.Call();
         }
 
-        SetupState(_state);
-        
-        _state.DoString(entryFile, entry);
+        var patches = Settings.GetTableForSection("Patches");
+        if (patches != null) {
+            foreach (string addressString in patches.Keys) {
+                uint address = Convert.ToUInt32(addressString, 16);
+                
+                if (patches[addressString].TomlType == TomlObjectType.Int) {
+                    var value = patches.Get<int>(addressString);
+                    
+                    _target.WriteMemory(address, (uint)value);
+                }
 
-        (_state["OnLoad"] as LuaFunction)?.Call();
+                if (patches[addressString].TomlType == TomlObjectType.String) {
+                    // This is a binary file that we need to load and write to memory
+                    var filename = patches.Get<string>(addressString);
+                    var bytes = File.ReadAllBytes(Path.Combine(ModulePath, filename));
+                    
+                    // Write 1024 bytes at a time
+                    for (int i = 0; i < bytes.Length; i += 1024) {
+                        int length = Math.Min(1024, bytes.Length - i);
+                        byte[] chunk = new byte[length];
+                        Array.Copy(bytes, i, chunk, 0, length);
+
+                        _target.WriteMemory(address + (uint)i, (uint)length, chunk);
+                    }
+                }
+            }
+        }
+        
+        IsLoaded = true;
     }
     
     public void Exit() {
+        IsLoaded = false;
+        
         (_state["OnUnload"] as LuaFunction)?.Call();
         
         TrainerDelegate.CloseAllWindows();
@@ -123,6 +156,10 @@ public class Module {
     }
     
     public static List<Module> ModulesForTitle(string title, Target.Target target) {
+        if (title == null || title == "") {
+            return [];
+        }
+        
         string scriptsDir = Path.Combine(ModulesRoot(), title);
         
         if (Directory.Exists(scriptsDir)) {

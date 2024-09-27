@@ -10,4 +10,7 @@
     <ItemGroup>
       <ProjectReference Include="..\TrainManCore\TrainManCore.csproj" />
     </ItemGroup>
+    <ItemGroup>
+      <PackageReference Include="SparkleSharp" Version="1.0.0-rc8" />
+    </ItemGroup>
 </Project>

@@ -44,22 +44,22 @@ public class Inputs {
         ) {
         var mask = new HashSet<Buttons>();
         
-        if (cross) mask.Add(Buttons.cross);
-        if (circle) mask.Add(Buttons.circle);
-        if (triangle) mask.Add(Buttons.triangle);
-        if (square) mask.Add(Buttons.square);
-        if (up) mask.Add(Buttons.up);
-        if (down) mask.Add(Buttons.down);
-        if (left) mask.Add(Buttons.left);
-        if (right) mask.Add(Buttons.right);
-        if (l1) mask.Add(Buttons.l1);
-        if (l2) mask.Add(Buttons.l2);
-        if (l3) mask.Add(Buttons.l3);
-        if (r1) mask.Add(Buttons.r1);
-        if (r2) mask.Add(Buttons.r2);
-        if (r3) mask.Add(Buttons.r3);
-        if (start) mask.Add(Buttons.start);
-        if (select) mask.Add(Buttons.select);
+        if (cross) mask.Add(Buttons.Cross);
+        if (circle) mask.Add(Buttons.Circle);
+        if (triangle) mask.Add(Buttons.Triangle);
+        if (square) mask.Add(Buttons.Square);
+        if (up) mask.Add(Buttons.Up);
+        if (down) mask.Add(Buttons.Down);
+        if (left) mask.Add(Buttons.Left);
+        if (right) mask.Add(Buttons.Right);
+        if (l1) mask.Add(Buttons.L1);
+        if (l2) mask.Add(Buttons.L2);
+        if (l3) mask.Add(Buttons.L3);
+        if (r1) mask.Add(Buttons.R1);
+        if (r2) mask.Add(Buttons.R2);
+        if (r3) mask.Add(Buttons.R3);
+        if (start) mask.Add(Buttons.Start);
+        if (select) mask.Add(Buttons.Select);
         
         return new InputState {
             Mask = mask,
@@ -87,22 +87,22 @@ public class Inputs {
     }
 
     public enum Buttons {
-        cross,
-        circle,
-        triangle,
-        square,
-        up,
-        down,
-        left,
-        right,
-        l1,
-        l2,
-        l3,
-        r1,
-        r2,
-        r3,
-        start,
-        select
+        Cross,
+        Circle,
+        Triangle,
+        Square,
+        Up,
+        Down,
+        Left,
+        Right,
+        L1,
+        L2,
+        L3,
+        R1,
+        R2,
+        R3,
+        Start,
+        Select
     }
 
     public class InputState {
