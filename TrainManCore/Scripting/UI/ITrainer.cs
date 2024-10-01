@@ -10,7 +10,7 @@ public interface ITrainer {
     /// <param name="module"></param>
     /// <param name="isMainWindow"></param>
     /// <returns></returns>
-    public IWindow CreateWindow(Module module, bool isMainWindow = false);
+    public IWindow CreateWindow(Module module, string className, bool isMainWindow = false);
     public IMenu AddMenu(string title, Action<IMenu> callback);
     public void CloseAllWindows();
     void Alert(string text);

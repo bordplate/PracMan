@@ -3,6 +3,7 @@ namespace TrainManCore.Scripting.UI;
 using NLua;
 
 public interface IContainer {
+    public IWindow Window { get; set; }
     public IContainer AddRow(LuaFunction callback);
     public IContainer AddColumn(LuaFunction callback);
     public ISpacer AddSpacer();

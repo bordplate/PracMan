@@ -1,12 +1,15 @@
 using NLua;
+using TrainMan.TrainerUI;
 using TrainManCore.Scripting;
 using TrainManCore.Scripting.UI;
 
 namespace TrainMan;
 
 public class TrainerViewController: NSViewController, IWindow {
+    public string ClassName { get; }
+    public event Action? OnWindowLoaded;
     public NSWindow Window;
-    
+
     LuaTable? _luaContext;
 
     private bool _viewLoaded = false;
@@ -17,8 +20,11 @@ public class TrainerViewController: NSViewController, IWindow {
     private Module _module;
 
     private NSMenu _menu;
+    private List<Button> _buttons = [];
     
-    public TrainerViewController(bool isMainWindow, Module module) : base() {
+    public TrainerViewController(bool isMainWindow, string className, Module module) : base() {
+        ClassName = className;
+        
         _module = module;
         _isMainWindow = isMainWindow;
 
@@ -61,6 +67,8 @@ public class TrainerViewController: NSViewController, IWindow {
         if (_luaContext != null) {
             (_luaContext["OnLoad"] as LuaFunction)?.Call();
         }
+        
+        OnWindowLoaded?.Invoke();
     }
     
     public override void ViewDidDisappear() {
@@ -70,13 +78,14 @@ public class TrainerViewController: NSViewController, IWindow {
             _module.Exit();
         }
     }
-    
+
     public void SetLuaContext(LuaTable luaContext) {
         _luaContext = luaContext;
         
         // If the view is already loaded, call OnLoad
         if (_viewLoaded) {
             (_luaContext["OnLoad"] as LuaFunction)?.Call([_luaContext]);
+            OnWindowLoaded?.Invoke();
         }
     }
     
@@ -93,7 +102,7 @@ public class TrainerViewController: NSViewController, IWindow {
     }
 
     public IContainer AddColumn() {
-        var column = new TrainerUI.Column();
+        var column = new Column(this);
         
         _stackView.AddArrangedSubview(column);
         
@@ -101,5 +110,19 @@ public class TrainerViewController: NSViewController, IWindow {
         column.AddConstraints(NSLayoutConstraint.FromVisualFormat("H:[column(>=250)]", NSLayoutFormatOptions.None, null, new NSDictionary("column", column)));
 
         return column;
+    }
+    
+    public IButton? GetButton(string title) {
+        foreach (var button in _buttons) {
+            if (button.Title == title) {
+                return button;
+            }
+        }
+
+        return null;
+    }
+    
+    public void RegisterButton(Button button) {
+        _buttons.Add(button);
     }
 }

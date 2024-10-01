@@ -4,7 +4,10 @@ using TrainManCore.Scripting.UI;
 namespace TrainMan.TrainerUI;
 
 public class Menu: NSMenuItem, IMenu {
-    public Menu(string title) {
+    public IWindow Window { get; }
+    
+    public Menu(IWindow window, string title) {
+        Window = window;
         Title = title;
         
         Submenu = new NSMenu(title);
@@ -15,14 +18,18 @@ public class Menu: NSMenuItem, IMenu {
     }
 
     public IMenuItem AddItem(string title, Action callback) {
-        var item = new MenuItem(title, callback);
+        var item = new MenuItem(Window, title, callback);
         
         Submenu.AddItem(item);
         
         return item;
     }
 
-    public IMenuItem AddCheckItem(string title, LuaFunction callback) {
-        throw new NotImplementedException();
+    public IMenuItem AddCheckItem(string title, Action<bool> callback) {
+        var item = new MenuItem(Window, title, callback);
+        
+        Submenu.AddItem(item);
+        
+        return item;
     }
 }

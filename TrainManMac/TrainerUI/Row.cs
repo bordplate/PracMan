@@ -1,7 +1,11 @@
+using TrainManCore.Scripting.UI;
+
 namespace TrainMan.TrainerUI;
 
 public class Row: Container {
-    public Row() : base() {
+    public Row(IWindow window) {
+        Window = window;
+        
         TranslatesAutoresizingMaskIntoConstraints = false;
         Orientation = NSUserInterfaceLayoutOrientation.Horizontal;
         Distribution = NSStackViewDistribution.FillEqually;

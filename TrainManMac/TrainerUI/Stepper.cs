@@ -5,12 +5,15 @@ namespace TrainMan.TrainerUI;
 
 // Numeric stepper. NSTextField with NSStepper on the right.
 public class Stepper: NSView, IStepper {
+    public IWindow Window { get; }
+    
     private NSTextField _textField;
     private NSStepper _stepper;
     
     private LuaFunction _callback;
 
-    public Stepper(int minValue, int maxValue, int step, LuaFunction callback) {
+    public Stepper(IWindow window, int minValue, int maxValue, int step, LuaFunction callback) {
+        Window = window;
         _callback = callback;
         
         _textField = new NSTextField {

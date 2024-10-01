@@ -1,23 +1,43 @@
 using NLua;
+using TrainManCore.Scripting.UI;
 
 namespace TrainManCore.Scripting;
 
 public class Inputs {
-    public HashSet<Buttons> Mask = new HashSet<Buttons>();
+    public static IButtonListener? ButtonListener { get; set; }
+    public Lua State { get; }
+    public bool ButtonCombosListening { get; private set; }
+    public event Action<InputState> OnInput {
+        add {
+            _onInput += value;
+            StartListening();
+        }
+        remove {
+            _onInput -= value;
 
-    public float lx = 0.0f;
-    public float ly = 0.0f;
-    public float rx = 0.0f;
-    public float ry = 0.0f;
+            // Stop listening if no more listeners
+            if (_onInput == null) {
+                StopListening();
+            }
+        }
+    }
 
-    private Lua _state;
+    private Action<InputState>? _onInput;
+    private Module _module;
+    private readonly List<ButtonCombo> _buttonCombos = [];
+    private ButtonCombo _lastButtonCombo = new();  // For debouncing
+    private int _lastButtonDebounce = 0;
+    private Timer? _timer;
+    private SynchronizationContext? _context;
+    private bool _listening;
 
-    public Inputs(Lua state) {
-        _state = state;
+    public Inputs(Lua state, Module module) {
+        State = state;
+        _module = module;
         
-        _state["NewInputState"] = NewInputState; 
+        State["NewInputState"] = NewInputState; 
         
-        (_state["OnLoad"] as LuaFunction)?.Call();
+        (State["OnLoad"] as LuaFunction)?.Call();
     }
 
     public static InputState NewInputState(
@@ -70,8 +90,31 @@ public class Inputs {
         };
     }
 
+    public void StartListening() {
+        if (_listening) {
+            return;
+        }
+        
+        _listening = true;
+        
+        _timer = new Timer(sender => {
+            _context?.Post(_ => _onInput?.Invoke(GetCurrentInputs()), null);
+        }, null, 0, 1000 / 60);
+        _context = SynchronizationContext.Current ?? new SynchronizationContext();
+    }
+    
+    public void StopListening() {
+        if (!_listening) {
+            return;
+        }
+        
+        _listening = false;
+        
+        _timer.Dispose();
+    }
+
     public InputState GetCurrentInputs() {
-        var inputs = (_state["GetInputs"] as LuaFunction)?.Call()[0];
+        var inputs = (State["GetInputs"] as LuaFunction)?.Call()[0];
 
         if (inputs == null) {
             return new InputState {
@@ -86,30 +129,187 @@ public class Inputs {
         return (InputState)inputs;
     }
 
+    private void ButtonComboListener(InputState inputs) {
+        _lastButtonDebounce -= 1;
+        
+        if (_lastButtonDebounce > 0) {
+            return;
+        }
+        
+        // Check if any button combos are exclusively pressed
+        foreach (var combo in _buttonCombos) {
+            if (combo.Combo.All(button => inputs.Mask.Contains(button)) &&
+                combo.Combo.Count == inputs.Mask.Count &&
+                !combo.Equals(_lastButtonCombo)) {
+                combo.Button.Activate();
+                
+                _lastButtonCombo = combo;
+                _lastButtonDebounce = 10;
+            }
+        }
+        
+        _lastButtonCombo = new();
+    }
+    
+    public void EnableButtonCombos() {
+        if (ButtonCombosListening) {
+            return;
+        }
+        
+        ButtonCombosListening = true;
+
+        OnInput += ButtonComboListener;
+    }
+    
+    public void DisableButtonCombos() {
+        if (!ButtonCombosListening) {
+            return;
+        }
+        
+        ButtonCombosListening = false;
+
+        OnInput -= ButtonComboListener;
+    }
+    
+    public void BindButtonCombos(IWindow window) {
+        if (State["Settings"] is not Settings settings) {
+            throw new Exception("No Settings in the Inputs' state.");
+        }
+        
+        var combos = settings.Get("Inputs.combos", new List<Dictionary<string, object>>());
+
+        foreach (var combo in combos) {
+            if (combo["combo"] is not Int64 mask || 
+                combo["button"] is not string buttonTitle || 
+                combo["window"] is not string windowClassName
+            ) {
+                throw new Exception("Invalid button combo in settings.");
+            }
+            
+            if (window.ClassName != windowClassName) {
+                continue;
+            }
+            
+            // Don't rebind button if it's already bound
+            if (_buttonCombos.Any(c => c.Button.Title == buttonTitle && c.Button.Window.ClassName == windowClassName)) {
+                continue;
+            }
+            
+            // Cast the mask to a list of buttons
+            var buttons = new HashSet<Buttons>();
+            foreach (var buttonValue in Enum.GetValues(typeof(Buttons))) {
+                if (((int)buttonValue & mask) != 0) {
+                    buttons.Add((Buttons)buttonValue);
+                }
+            }
+            
+            if (window.GetButton(buttonTitle) is not { } button) {
+                throw new Exception("Button not found.");
+            }
+            
+            _buttonCombos.Add(new ButtonCombo {
+                Button = button,
+                Combo = buttons
+            });
+        }
+    }
+    
+    public void AddOrUpdateButtonCombo(ButtonCombo combo, bool save = true) {
+        var existing = _buttonCombos.FirstOrDefault(c => c.Button == combo.Button);
+
+        if (existing != null) {
+            existing.Combo = combo.Combo;
+        } else {
+            _buttonCombos.Add(combo);
+        }
+
+        EnableButtonCombos();
+        
+        if (save) {
+            SaveCombosToSettings();
+        }
+    }
+    
+    public void RemoveButtonCombo(ButtonCombo combo) {
+        _buttonCombos.Remove(combo);
+        
+        if (_buttonCombos.Count == 0 && ButtonCombosListening) {
+            DisableButtonCombos();
+        }
+        
+        SaveCombosToSettings();
+    }
+
+    public void SaveCombosToSettings() {
+        if (State["Settings"] is not Settings settings) {
+            throw new Exception("No Settings in the Inputs' state.");
+        }
+
+        var combos = new List<Dictionary<string, object>>();
+
+        foreach (var combo in _buttonCombos) {
+            // Cast the combo to a mask of buttons
+            var mask = combo.Combo.Select(button => (int)button).Aggregate((a, b) => a | b);
+            
+            combos.Add(new() {
+                ["combo"] = mask, 
+                ["button"] = combo.Button.Title, 
+                ["window"] = combo.Button.Window.ClassName
+            });
+        }
+        
+        settings.Set("Inputs.combos", combos);
+    }
+
+    public List<ButtonCombo> ButtonCombos() {
+        return _buttonCombos;
+    }
+
     public enum Buttons {
-        Cross,
-        Circle,
-        Triangle,
-        Square,
-        Up,
-        Down,
-        Left,
-        Right,
-        L1,
-        L2,
-        L3,
-        R1,
-        R2,
-        R3,
-        Start,
-        Select
+        Cross = 0x1,
+        Circle = 0x2,
+        Triangle = 0x4,
+        Square = 0x8,
+        Up = 0x10,
+        Down = 0x20,
+        Left = 0x40,
+        Right = 0x80,
+        L1 = 0x100,
+        L2 = 0x200,
+        L3 = 0x400,
+        R1 = 0x800,
+        R2 = 0x1000,
+        R3 = 0x2000,
+        Start = 0x4000,
+        Select = 0x8000
     }
 
     public class InputState {
-        public HashSet<Buttons> Mask { get; set; }
+        public HashSet<Buttons> Mask { get; set; } = new();
         public float lx { get; set; }
         public float ly { get; set; }
         public float rx { get; set; }
         public float ry { get; set; }
+        
+        public string ToString() {
+            var buttons = Mask.Select(button => button.ToString()).ToList();
+
+            return string.Join("+", buttons);
+        }
+    }
+
+    public class ButtonCombo {
+        public IButton Button { get; set; }
+        public HashSet<Buttons> Combo { get; set; }
+
+        public string ToString() {
+            var buttons = Combo.Select(button => button.ToString()).ToList();
+            
+            return string.Join("+", buttons);
+        }
+        
+        public bool Equals(ButtonCombo other) {
+            return Button == other.Button && Combo.SetEquals(other.Combo);
+        }
     }
 }

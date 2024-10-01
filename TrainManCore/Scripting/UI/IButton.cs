@@ -1,5 +1,23 @@
+using NLua;
+
 namespace TrainManCore.Scripting.UI;
 
+public interface IButtonListener {
+    public void OnButtonPressed(IButton button);
+}
+
 public interface IButton {
-    
+    public IWindow Window { get; }
+    public string Title { get; set; }
+    public LuaFunction Callback { get; set; }
+
+    public void Activate() {
+        if (Inputs.ButtonListener != null) {
+            Inputs.ButtonListener.OnButtonPressed(this);
+            
+            return;
+        }
+        
+        Callback.Call();
+    }
 }

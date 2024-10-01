@@ -1,0 +1,3 @@
+[General]
+"name" = "Inputs"
+"inputs_controller" = "inputs.lua"

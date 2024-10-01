@@ -4,3 +4,9 @@ entry = "main.lua"
 autorun = true
 supported_targets = ["ps3", "rpcs3"]
 inputs_controller = "inputs.lua"
+
+[Inputs]
+combos = [ { combo = 6656, button = "Save Position", window = "TrainerWindow" },
+    { combo = 4864, button = "Load Position", window = "TrainerWindow" },
+    { combo = 768, button = "Die", window = "TrainerWindow" },
+    { combo = 9216, button = "Load", window = "TrainerWindow" } ]

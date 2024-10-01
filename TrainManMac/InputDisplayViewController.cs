@@ -43,6 +43,7 @@ public class InputDisplayViewController : NSViewController {
 
 public class InputDisplayView : NSView {
     private Inputs _inputs;
+    private Inputs.InputState _currentInputs = new();
     
     public InputDisplayView(Inputs inputs) {
         _inputs = inputs;
@@ -120,8 +121,7 @@ public class InputDisplayView : NSView {
             return skin;
         }
     }
-
-    private NSTimer timer;
+    
     private ControllerSkin controllerSkin;
 
     public InputDisplayView() {
@@ -145,10 +145,12 @@ public class InputDisplayView : NSView {
         Layer.BackgroundColor = NSColor.Purple.CGColor;
 
         // Start the timer to refresh the view
-        timer = NSTimer.CreateRepeatingScheduledTimer(TimeSpan.FromMilliseconds(16.66667), TimerTick);
+        _inputs.OnInput += TimerTick;
     }
 
-    private void TimerTick(NSTimer obj) {
+    private void TimerTick(Inputs.InputState inputs) {
+        _currentInputs = inputs;
+        
         NeedsDisplay = true;
     }
 
@@ -162,7 +164,7 @@ public class InputDisplayView : NSView {
         var buttons = controllerSkin.buttons;
 
         // Replace with your actual Inputs implementation
-        var inputs = _inputs.GetCurrentInputs();
+        var inputs = _currentInputs;
 
         // Draw the base image
         DrawButton(sprite, buttons["base"], context);
@@ -228,6 +230,6 @@ public class InputDisplayView : NSView {
 
     public override void RemoveFromSuperview() {
         base.RemoveFromSuperview();
-        timer?.Invalidate();
+        _inputs.OnInput -= TimerTick;
     }
 }

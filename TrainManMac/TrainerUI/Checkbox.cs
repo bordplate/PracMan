@@ -4,9 +4,12 @@ using TrainManCore.Scripting.UI;
 namespace TrainMan.TrainerUI;
 
 public class Checkbox: NSButton, ICheckbox {
+    public IWindow Window { get; }
+    
     LuaFunction _callback;
     
-    public Checkbox(string text, LuaFunction callback) {
+    public Checkbox(IWindow window, string text, LuaFunction callback) {
+        Window = window;
         Title = text;
         BezelStyle = NSBezelStyle.Rounded;
         TranslatesAutoresizingMaskIntoConstraints = false;

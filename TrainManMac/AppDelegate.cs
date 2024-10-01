@@ -103,25 +103,13 @@ public class AppDelegate : NSApplicationDelegate {
 
     void CreateMenu() {
         MainMenu = new NSMenu();
-        // *** Application Menu ***
         MainMenu.AddItem(CreateAppMenuItem());
-        
-        // *** File Menu ***
-        // var fileMenuItem = new NSMenuItem();
-        //
-        // var fileMenu = new NSMenu("File");
-        // fileMenuItem.Submenu = fileMenu;
-        //
-        // MainMenu.AddItem(fileMenuItem);
 
-        // *** Edit Menu ***
         MainMenu.AddItem(CreateEditMenuItem());
 
-        // *** Window Menu ***
         WindowsMenu = CreateWindowMenuItem();
         MainMenu.AddItem(WindowsMenu);
 
-        // *** Help Menu ***
         HelpMenu = CreateHelpMenuItem();
         MainMenu.AddItem(HelpMenu);
 
@@ -244,12 +232,30 @@ public class AppDelegate : NSApplicationDelegate {
             });
                             
             if (module.Settings.Get<string>("General.inputs_controller", "") != "") {
+                menu.AddSeparator();
+                
                 menu.AddItem("Input display", () => {
                     if (trainerModule.InputDisplayViewController == null) {
                         trainerModule.InputDisplayViewController = new InputDisplayViewController(module.LoadInputs());
                     }
                                     
                     trainerModule.InputDisplayViewController.Window.MakeKeyAndOrderFront(null);
+                });
+                
+                var inputs = module.LoadInputs();
+                var buttonCombosCheckItem = menu.AddCheckItem("Enable button combos", enabled => {
+                    if (enabled) {
+                        inputs.EnableButtonCombos();
+                    } else {
+                        inputs.DisableButtonCombos();
+                    }
+                });
+
+                buttonCombosCheckItem.Checked = inputs.ButtonCombosListening;
+
+                menu.AddItem("Configure button combos...", () => {
+                    var buttonCombosViewController = new ButtonCombosViewController(module.LoadInputs());
+                    buttonCombosViewController.Window.MakeKeyAndOrderFront(null);
                 });
             }
         });

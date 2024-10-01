@@ -87,7 +87,7 @@ function TrainerWindow:OnLoad()
         end)
         
         column:AddButton("Turn on Drek Skip", function()
-            self.game:TurnOnDrekSkip()
+            self.game:SetDrekSkip(true)
         end)
         
         column:AddSpacer()

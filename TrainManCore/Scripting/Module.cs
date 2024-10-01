@@ -6,34 +6,26 @@ using TrainManCore.Target;
 
 namespace TrainManCore.Scripting;
 
-public class Module {
-    public event Action OnExit;
+public class Module(string title, string path, Target.Target target) {
+    public event Action? OnExit;
     
-    public string Title;
-    public string ModulePath;
+    public string Title = title;
+    public readonly string ModulePath = path;
     public bool IsLoaded;
-    public Settings Settings;
+    public readonly Settings Settings = new(Path.Combine(path, "config.toml"));
 
-    private Target.Target _target;
+    private readonly Target.Target _target = target;
+    private Inputs? _inputs;
 
-    private Lua _state = new();
+    private readonly Lua _state = new();
 
-    public ITrainer TrainerDelegate;
-    
-    public Module(string title, string path, Target.Target target) {
-        Title = title;
-        ModulePath = path;
-        _target = target;
-        
-        string settingsPath = Path.Combine(path, "config.toml");
-        Settings = new Settings(settingsPath);
-    }
+    public ITrainer? TrainerDelegate;
 
     public void Load() {
-        string entry = Settings.Get<string>("General.entry");
+        var entry = Settings.Get<string>("General.entry");
         
         if (entry != null) {
-            string entryFile = File.ReadAllText(Path.Combine(ModulePath, entry));
+            var entryFile = File.ReadAllText(Path.Combine(ModulePath, entry));
         
             if (entryFile == null) {
                 throw new Exception("Entry point file not found.");
@@ -48,8 +40,8 @@ public class Module {
 
         var patches = Settings.GetTableForSection("Patches");
         if (patches != null) {
-            foreach (string addressString in patches.Keys) {
-                uint address = Convert.ToUInt32(addressString, 16);
+            foreach (var addressString in patches.Keys) {
+                var address = Convert.ToUInt32(addressString, 16);
                 
                 if (patches[addressString].TomlType == TomlObjectType.Int) {
                     var value = patches.Get<int>(addressString);
@@ -63,9 +55,9 @@ public class Module {
                     var bytes = File.ReadAllBytes(Path.Combine(ModulePath, filename));
                     
                     // Write 1024 bytes at a time
-                    for (int i = 0; i < bytes.Length; i += 1024) {
-                        int length = Math.Min(1024, bytes.Length - i);
-                        byte[] chunk = new byte[length];
+                    for (var i = 0; i < bytes.Length; i += 1024) {
+                        var length = Math.Min(1024, bytes.Length - i);
+                        var chunk = new byte[length];
                         Array.Copy(bytes, i, chunk, 0, length);
 
                         _target.WriteMemory(address + (uint)i, (uint)length, chunk);
@@ -82,14 +74,18 @@ public class Module {
         
         (_state["OnUnload"] as LuaFunction)?.Call();
         
-        TrainerDelegate.CloseAllWindows();
+        TrainerDelegate?.CloseAllWindows();
 
-        OnExit();
+        OnExit?.Invoke();
     }
 
     public void SetupState(Lua state) {
         state.LoadCLRPackage();
-                
+        
+        if (TrainerDelegate == null) {
+            throw new Exception("TrainerDelegate not set.");
+        }
+        
         // Set package path to the runtime folder and the module's folder
         state.DoString($"package.path = package.path .. ';{ModulesRoot()}/Runtime/?.lua;{ModulePath}/?.lua'", "set package path");
 
@@ -123,11 +119,25 @@ public class Module {
         state["Target"] = _target;
     }
 
-    public IWindow CreateWindow(bool isMainWindow = false) {
-        return TrainerDelegate.CreateWindow(this, isMainWindow);
+    public IWindow CreateWindow(string className, bool isMainWindow = false) {
+        var window = TrainerDelegate!.CreateWindow(this, className, isMainWindow);
+        
+        window.OnWindowLoaded += WindowOnOnWindowLoaded;
+        
+        return window;
+        
+        void WindowOnOnWindowLoaded() {
+            _inputs?.BindButtonCombos(window);
+            
+            window.OnWindowLoaded -= WindowOnOnWindowLoaded;
+        }
     }
     
     public Inputs LoadInputs() {
+        if (_inputs != null) {
+            return _inputs;
+        }
+        
         var inputsControllerPath = Settings.Get<string>("General.inputs_controller", null);
         
         if (inputsControllerPath == null) {
@@ -141,8 +151,21 @@ public class Module {
         string entryFile = File.ReadAllText(Path.Combine(ModulePath, inputsControllerPath));
         
         state.DoString(entryFile, inputsControllerPath);
+
+        _inputs = new Inputs(state, this);
         
-        return new Inputs(state);
+        if (state["Settings"] is not Settings userSettings) {
+            throw new Exception("No Settings in the Module's state.");
+        }
+
+        if (!userSettings.Get("Inputs.has_default_combos", false)) {
+            var defaultCombos = Settings.Get("Inputs.combos", new List<Dictionary<string, object>>());
+            
+            userSettings.Set("Inputs.combos", defaultCombos);
+            userSettings.Set("Inputs.has_default_combos", true);
+        }
+        
+        return _inputs;
     }
     
     public static string ModulesRoot() {

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.IO;
 using Nett;
 
@@ -9,7 +10,15 @@ namespace TrainManCore;
 /// A class for handling application settings using the TOML format.
 /// </summary>
 public class Settings {
-    private static Settings _default;
+    public static Settings Default {
+        get {
+            var root = Environment.GetEnvironmentVariable("TRAINMAN_ROOT");
+            
+            return _default ??= new Settings(Path.Join(root, "settings.user.toml"), true);
+        }
+    }
+    
+    private static Settings? _default;
     private readonly TomlTable _settingsTable;
     private readonly string _configFilePath;
 
@@ -39,9 +48,9 @@ public class Settings {
     /// </summary>
     /// <param name="configFilePath">The path to the TOML settings file. Default value is "settings.toml".</param>
     /// <returns>The default instance of the <see cref="Settings"/> class.</returns>
-    public static Settings Default(string configFilePath = "settings.toml") {
-        return _default ??= new Settings(configFilePath, true);
-    }
+    // public static Settings Default(string configFilePath = "settings.user.toml") {
+    //     return _default ??= new Settings(configFilePath, true);
+    // }
 
     /// <summary>
     /// Gets the value for the specified key from the settings. If the setting is not found and there is a fallback
@@ -52,7 +61,7 @@ public class Settings {
     /// <param name="fallback">The fallback value to return if the key is not found. Default value is default(T).</param>
     /// <param name="silent">If false, saves the fallback to the config, if true, does not save the fallback value to the config file.</param>
     /// <returns>The value associated with the specified key, or the fallback value if the key is not found.</returns>
-    public T Get<T>(string key, T fallback = default, bool silent = true) {
+    public T? Get<T>(string key, T fallback = default, bool silent = true) {
         string[] keys = key.Split('.');
         TomlTable current = _settingsTable;
 
@@ -104,7 +113,14 @@ public class Settings {
         for (int i = 0; i < keys.Length - 1; i++) {
             if (!current.TryGetValue(keys[i], out TomlObject next)) {
                 next = current.CreateEmptyAttachedTable();
+
                 current.Add(keys[i], next);
+
+                // if (i >= key.Length - 1) {
+                //     current.Add(keys[i], next, TomlTable.TableTypes.Inline);
+                // } else {
+                //     
+                // }
             }
 
             if (!(next is TomlTable)) {
@@ -160,6 +176,23 @@ public class Settings {
                 break;
             case IEnumerable<DateTimeOffset> conv:
                 current.Add(keys[keys.Length - 1], current.CreateAttached(conv));
+                break;
+            case List<Dictionary<string, object>> conv:
+                // var array = current.CreateAttached(new List<TomlTable>(), TomlTable.TableTypes.Inline);
+                var array = current.CreateEmptyAttachedTableArray();
+                
+                foreach (var dict in conv) {
+                    var expando = new ExpandoObject();
+                    var expandoDict = (IDictionary<string, object>)expando;
+
+                    foreach (var kvp in dict) {
+                        expandoDict.Add(kvp.Key, kvp.Value);
+                    }
+
+                    array.Add(array.CreateAttached(expando, TomlTable.TableTypes.Inline));
+                }
+                
+                current.Add(keys[keys.Length - 1], array);
                 break;
             default:
                 current.Add(keys[keys.Length - 1], current.CreateAttached(value));

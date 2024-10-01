@@ -4,7 +4,9 @@ using TrainManCore.Scripting.UI;
 namespace TrainMan.TrainerUI;
 
 public class Column: Container {
-    public Column() : base() {
+    public Column(IWindow window) : base() {
+        Window = window;
+        
         TranslatesAutoresizingMaskIntoConstraints = false;
         Orientation = NSUserInterfaceLayoutOrientation.Vertical;
     }

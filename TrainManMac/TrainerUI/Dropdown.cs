@@ -4,11 +4,14 @@ using TrainManCore.Scripting.UI;
 namespace TrainMan.TrainerUI;
 
 public class Dropdown: NSPopUpButton, IDropdown {
+    public IWindow Window { get; }
     private LuaFunction _callback;
     
     Dictionary<int, string> _items = new ();
     
-    public Dropdown(LuaTable items, LuaFunction callback) {
+    public Dropdown(IWindow window, LuaTable items, LuaFunction callback) {
+        Window = window;
+        
         _callback = callback;
         _items = GetItemsFromLuaTable(items);
         

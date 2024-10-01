@@ -4,10 +4,12 @@ using TrainManCore.Scripting.UI;
 namespace TrainMan.TrainerUI;
 
 public class Button: NSButton, IButton {
-    private LuaFunction _callback;
+    public IWindow Window { get; }
+    public LuaFunction Callback { get; set; }
     
-    public Button(string title, LuaFunction callback) {
-        _callback = callback;
+    public Button(IWindow window, string title, LuaFunction callback) {
+        Window = window;
+        Callback = callback;
         
         Title = title;
         BezelStyle = NSBezelStyle.Rounded;
@@ -18,6 +20,6 @@ public class Button: NSButton, IButton {
     
     [Export("buttonClicked:")]
     public void ButtonClicked(NSObject sender) {
-        _callback.Call();
+        ((IButton)this).Activate();
     }
 }

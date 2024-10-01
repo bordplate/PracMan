@@ -40,7 +40,7 @@ public class TrainerModule: ITrainer {
         });
     }
     
-    public IWindow CreateWindow(Module module, bool isMainWindow = false) {
+    public IWindow CreateWindow(Module module, string className, bool isMainWindow = false) {
         if (_mainWindow == null && !isMainWindow) {
             throw new Exception("Main window must be created first.");
         }
@@ -49,7 +49,7 @@ public class TrainerModule: ITrainer {
             throw new Exception("Main window already created.");
         }
         
-        var window = new TrainerViewController(isMainWindow, module);
+        var window = new TrainerViewController(isMainWindow, className, module);
         
         if (isMainWindow) {
             _mainWindow = window;
@@ -61,7 +61,7 @@ public class TrainerModule: ITrainer {
     }
     
     public IMenu AddMenu(string title, Action<IMenu>? callback) {
-        var newMenu = new Menu(title);
+        var newMenu = new Menu(_mainWindow, title);
 
         foreach (var menu in _menus) {
             // If the menu already exists, add a separator and return the existing menu
@@ -103,11 +103,5 @@ public class TrainerModule: ITrainer {
         };
         
         alert.RunModal();
-    }
-    
-    public void RunOnMainThread(Action action) {
-        NSApplication.SharedApplication.InvokeOnMainThread(() => {
-            action();
-        });
     }
 }

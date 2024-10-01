@@ -4,10 +4,11 @@ using TrainManCore.Scripting.UI;
 namespace TrainMan.TrainerUI;
 
 public abstract class Container: NSStackView, IContainer {
+    public IWindow Window { get; set; }
     public abstract void ConstrainElement(NSView element);
     
     public ILabel AddLabel(string text) {
-        var label = new Label(text);
+        var label = new Label(Window, text);
         AddArrangedSubview(label);
         
         ConstrainElement(label);
@@ -16,7 +17,7 @@ public abstract class Container: NSStackView, IContainer {
     }
     
     public ITextField AddTextField(LuaFunction callback) {
-        var textField = new TextField(callback);
+        var textField = new TextField(Window, callback);
         AddArrangedSubview(textField);
         
         ConstrainElement(textField);
@@ -25,17 +26,18 @@ public abstract class Container: NSStackView, IContainer {
     }
 
     public IButton AddButton(string title, LuaFunction callback) {
-        var button = new Button(title, callback);
+        var button = new Button(Window, title, callback);
         AddArrangedSubview(button);
         
         ConstrainElement(button);
+        
+        ((TrainerViewController)Window).RegisterButton(button);
         
         return button;
     }
     
     public IDropdown AddDropdown(LuaTable options, LuaFunction callback) {
-        // Convert LuaTable to List<string>
-        var dropdown = new Dropdown(options, callback);
+        var dropdown = new Dropdown(Window, options, callback);
         AddArrangedSubview(dropdown);
         
         ConstrainElement(dropdown);
@@ -44,7 +46,7 @@ public abstract class Container: NSStackView, IContainer {
     }
     
     public ICheckbox AddCheckbox(string text, LuaFunction callback) {
-        var checkbox = new Checkbox(text, callback);
+        var checkbox = new Checkbox(Window, text, callback);
         AddArrangedSubview(checkbox);
         
         ConstrainElement(checkbox);
@@ -53,7 +55,7 @@ public abstract class Container: NSStackView, IContainer {
     }
 
     public IContainer AddRow(LuaFunction callback) {
-        var row = new Row();
+        var row = new Row(Window);
         AddArrangedSubview(row);
         
         ConstrainElement(row);
@@ -64,13 +66,14 @@ public abstract class Container: NSStackView, IContainer {
     }
     
     public IContainer AddColumn(LuaFunction callback) {
-        var column = new Column();
+        var column = new Column(Window);
         AddArrangedSubview(column);
         
         ConstrainElement(column);
         
         // Make column fill from top to bottom
-        AddConstraints(NSLayoutConstraint.FromVisualFormat("V:|-10-[column]-10-|", NSLayoutFormatOptions.None, null, new NSDictionary("column", column)));
+        AddConstraints(NSLayoutConstraint.FromVisualFormat("V:|-10-[column]-10-|", NSLayoutFormatOptions.None, 
+            null, new NSDictionary("column", column)));
         
         callback.Call(column);
         
@@ -78,7 +81,7 @@ public abstract class Container: NSStackView, IContainer {
     }
     
     public ISpacer AddSpacer() {
-        var spacer = new Spacer();
+        var spacer = new Spacer(Window);
         AddArrangedSubview(spacer);
         
         ConstrainElement(spacer);
@@ -87,7 +90,7 @@ public abstract class Container: NSStackView, IContainer {
     }
     
     public IStepper AddStepper(int minValue, int maxValue, int step, LuaFunction callback) {
-        var stepper = new Stepper(minValue, maxValue, step, callback);
+        var stepper = new Stepper(Window, minValue, maxValue, step, callback);
         AddArrangedSubview(stepper);
         
         ConstrainElement(stepper);
