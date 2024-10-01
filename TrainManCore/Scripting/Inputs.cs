@@ -25,7 +25,6 @@ public class Inputs {
     private Action<InputState>? _onInput;
     private Module _module;
     private readonly List<ButtonCombo> _buttonCombos = [];
-    private ButtonCombo _lastButtonCombo = new();  // For debouncing
     private int _lastButtonDebounce = 0;
     private Timer? _timer;
     private SynchronizationContext? _context;
@@ -110,7 +109,7 @@ public class Inputs {
         
         _listening = false;
         
-        _timer.Dispose();
+        _timer?.Dispose();
     }
 
     public InputState GetCurrentInputs() {
@@ -139,16 +138,11 @@ public class Inputs {
         // Check if any button combos are exclusively pressed
         foreach (var combo in _buttonCombos) {
             if (combo.Combo.All(button => inputs.Mask.Contains(button)) &&
-                combo.Combo.Count == inputs.Mask.Count &&
-                !combo.Equals(_lastButtonCombo)) {
+                combo.Combo.Count == inputs.Mask.Count) {
                 combo.Button.Activate();
-                
-                _lastButtonCombo = combo;
-                _lastButtonDebounce = 10;
+                _lastButtonDebounce = 60;
             }
         }
-        
-        _lastButtonCombo = new();
     }
     
     public void EnableButtonCombos() {
@@ -175,8 +169,10 @@ public class Inputs {
         if (State["Settings"] is not Settings settings) {
             throw new Exception("No Settings in the Inputs' state.");
         }
-        
-        var combos = settings.Get("Inputs.combos", new List<Dictionary<string, object>>());
+
+        if (settings.Get("Inputs.combos", new List<Dictionary<string, object>>()) is not { } combos) {
+            return;
+        }
 
         foreach (var combo in combos) {
             if (combo["combo"] is not Int64 mask || 
@@ -207,10 +203,7 @@ public class Inputs {
                 throw new Exception("Button not found.");
             }
             
-            _buttonCombos.Add(new ButtonCombo {
-                Button = button,
-                Combo = buttons
-            });
+            _buttonCombos.Add(new ButtonCombo(button, buttons));
         }
     }
     
@@ -298,9 +291,9 @@ public class Inputs {
         }
     }
 
-    public class ButtonCombo {
-        public IButton Button { get; set; }
-        public HashSet<Buttons> Combo { get; set; }
+    public class ButtonCombo(IButton button, HashSet<Buttons> combo) {
+        public IButton Button { get; set; } = button;
+        public HashSet<Buttons> Combo { get; set; } = combo;
 
         public string ToString() {
             var buttons = Combo.Select(button => button.ToString()).ToList();

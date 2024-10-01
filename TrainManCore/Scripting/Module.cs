@@ -133,7 +133,7 @@ public class Module(string title, string path, Target.Target target) {
         }
     }
     
-    public Inputs LoadInputs() {
+    public Inputs? LoadInputs() {
         if (_inputs != null) {
             return _inputs;
         }
@@ -169,10 +169,10 @@ public class Module(string title, string path, Target.Target target) {
     }
     
     public static string ModulesRoot() {
-        var rootDir = Path.Combine(Directory.GetCurrentDirectory());
+        var rootDir = Environment.GetEnvironmentVariable("TRAINMAN_ROOT");
         
-        if (Environment.GetEnvironmentVariable("TRAINMAN_ROOT") != null) {
-            rootDir = Environment.GetEnvironmentVariable("TRAINMAN_ROOT");
+        if (rootDir == null) {
+            rootDir = Directory.GetCurrentDirectory();
         }
         
         return Path.Combine(rootDir, "Scripts");

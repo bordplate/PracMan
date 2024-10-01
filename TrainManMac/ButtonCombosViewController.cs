@@ -9,10 +9,10 @@ public class ButtonCombosViewController: NSViewController, INSTableViewDelegate,
     public NSWindow Window;
 
     private Inputs _inputs;
+    private bool _shouldReactivateButtonCombos;
     private NSTableView _combosTableView;
     
     private IButton _selectedButton;
-    private Inputs.ButtonCombo _selectedCombo;
     
     private NSSegmentedControl _segmentedControl;
 
@@ -115,8 +115,6 @@ public class ButtonCombosViewController: NSViewController, INSTableViewDelegate,
             Inputs.ButtonListener = this;
             
             segmentedControl.SetEnabled(false, 0);
-
-            _selectedCombo = new();
         } else if (segmentedControl.SelectedSegment == 1) {
             var selectedRow = _combosTableView.SelectedRow;
             
@@ -126,8 +124,16 @@ public class ButtonCombosViewController: NSViewController, INSTableViewDelegate,
             
             if (selectedRow >= _inputs.ButtonCombos().Count) {
                 _combosTableView.RemoveRows(NSIndexSet.FromIndex(selectedRow), NSTableViewAnimation.SlideUp);
+
+                if (_selectedButton != null) {
+                    _inputs.OnInput -= OnInput;
+
+                    if (_shouldReactivateButtonCombos) {
+                        _inputs.EnableButtonCombos();
+                    }
+                }
+                
                 _selectedButton = null;
-                _selectedCombo = null;
                 _currentCombo = new();
                 segmentedControl.SetEnabled(true, 0);
                 
@@ -222,11 +228,14 @@ public class ButtonCombosViewController: NSViewController, INSTableViewDelegate,
             _selectButtonLabel.StringValue = button.Title;
             _selectButtonLabel.Bordered = false;
             _selectButtonLabel.DrawsBackground = false;
-
-            _selectedCombo.Button = button;
         }
         
         if (_selectComboLabel != null) {
+            if (_inputs.ButtonCombosListening) {
+                _inputs.DisableButtonCombos();
+                _shouldReactivateButtonCombos = true;
+            }
+            
             _inputs.OnInput += OnInput;
             _selectComboLabel.StringValue = "Press a button combination...";
             _selectComboLabel.Bordered = true;
@@ -246,15 +255,16 @@ public class ButtonCombosViewController: NSViewController, INSTableViewDelegate,
         // If the user releases a button, stop listening for input
         if (_currentCombo.Count > inputs.Mask.Count) {
             _inputs.OnInput -= OnInput;
+
+            if (_shouldReactivateButtonCombos) {
+                _inputs.EnableButtonCombos();
+            }
+            
             _selectComboLabel.Bordered = false;
             _selectComboLabel.DrawsBackground = false;
-            _selectedCombo.Combo = new(_currentCombo);
-            
             _selectComboLabel.StringValue = string.Join("+", _currentCombo.Select(button => button.ToString()).ToList());
             
-            _inputs.AddOrUpdateButtonCombo(_selectedCombo);
-
-            _selectedCombo = null;
+            _inputs.AddOrUpdateButtonCombo(new Inputs.ButtonCombo(_selectedButton, _currentCombo));
             _selectedButton = null;
             _currentCombo = new();
             

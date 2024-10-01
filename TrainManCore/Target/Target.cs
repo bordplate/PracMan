@@ -6,12 +6,12 @@ namespace TrainManCore.Target;
 public abstract class Target {
     protected string _address;
     
-    public event Action OnStop;
+    public event Action? OnStop;
 
-    public Action<Action> RunOnMainThread;
+    public Action<Action>? RunOnMainThread;
     
     public delegate void DicoveredTargetsCallback(List<string> targets);
-    public delegate void AttachedCallback(bool success, string message);
+    public delegate void AttachedCallback(bool success, string? message);
     
     public static string Name() {
         throw new NotImplementedException();
@@ -32,7 +32,7 @@ public abstract class Target {
     public abstract bool Start(AttachedCallback callback);
 
     public virtual bool Stop() {
-        OnStop();
+        OnStop?.Invoke();
 
         return true;
     }

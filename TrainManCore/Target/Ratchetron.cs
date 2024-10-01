@@ -98,7 +98,7 @@ public class Ratchetron(string ip) : Target(ip) {
         WriteStream(cmd, 0, 1);
 
         byte[] titleIdBuf = new byte[16];
-        _ = _stream.Read(titleIdBuf, 0, 16);
+        _ = _stream?.Read(titleIdBuf, 0, 16);
 
         return System.Text.Encoding.Default.GetString(titleIdBuf).Replace("\0", string.Empty);
     }
@@ -172,6 +172,10 @@ public class Ratchetron(string ip) : Target(ip) {
     }
 
     public override byte[] ReadMemory(uint address, uint size) {
+        if (_stream == null) {
+            throw new Exception("I ain't connected");
+        }
+        
         var cmdBuf = new List<byte>();
         cmdBuf.Add(0x04);
         cmdBuf.AddRange(BitConverter.GetBytes((UInt32)_pid).Reverse());
@@ -215,6 +219,10 @@ public class Ratchetron(string ip) : Target(ip) {
     }
 
     private void DataChannelReceive() {
+        if (_udpClient == null) {
+            return;
+        }
+        
         IPEndPoint end = new IPEndPoint(IPAddress.Any, 0);
 
         while (this._connected) {
@@ -264,41 +272,47 @@ public class Ratchetron(string ip) : Target(ip) {
             }
         }
 
-        var assignedPort = ((IPEndPoint)this._udpClient.Client.LocalEndPoint).Port;
+        if (_udpClient != null && _udpClient.Client.LocalEndPoint != null) {
+            var assignedPort = ((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;
 
-        var cmdBuf = new List<byte>();
-        cmdBuf.Add(0x09);
-        cmdBuf.AddRange(BitConverter.GetBytes((UInt32)assignedPort).Reverse());
+            var cmdBuf = new List<byte>();
+            cmdBuf.Add(0x09);
+            cmdBuf.AddRange(BitConverter.GetBytes((UInt32)assignedPort).Reverse());
 
-        this.WriteStream(cmdBuf.ToArray(), 0, cmdBuf.Count);
+            this.WriteStream(cmdBuf.ToArray(), 0, cmdBuf.Count);
 
-        byte[] returnValue = new byte[1];
+            byte[] returnValue = new byte[1];
 
-        int nBytes = 0;
-        while (nBytes < 1) {
-            nBytes += _stream.Read(returnValue, 0, 1);
-        }
+            int nBytes = 0;
+            while (nBytes < 1) {
+                if (_stream != null) nBytes += _stream.Read(returnValue, 0, 1);
+            }
 
-        if (returnValue[0] == 128) {
-            Console.WriteLine("Waiting for connection on port " + assignedPort);
+            if (returnValue[0] == 128) {
+                Console.WriteLine("Waiting for connection on port " + assignedPort);
 
-            //this.udpClient.Send(new byte[] { 0x01 }, 1, remoteEndpoint);
+                //this.udpClient.Send(new byte[] { 0x01 }, 1, remoteEndpoint);
 
-            Thread dataThread = new Thread(this.DataChannelReceive);
-            dataThread.Start();
-        }
-        else if (returnValue[0] == 2) {
-            Console.WriteLine("Tried to open data channel, but server says we already have one open.");
-            _udpClient.Close();
-        }
-        else {
-            Console.WriteLine("Server error trying to open data channel.");
-            _udpClient.Close();
+                Thread dataThread = new Thread(this.DataChannelReceive);
+                dataThread.Start();
+            }
+            else if (returnValue[0] == 2) {
+                Console.WriteLine("Tried to open data channel, but server says we already have one open.");
+                _udpClient.Close();
+            }
+            else {
+                Console.WriteLine("Server error trying to open data channel.");
+                _udpClient.Close();
+            }
         }
     }
 
     public override int SubMemory(uint address, uint size, MemoryCondition condition, byte[] memory,
         Action<byte[]> callback) {
+        if (_stream == null) {
+            throw new Exception("I ain't connected");
+        }
+        
         var cmdBuf = new List<byte>();
         cmdBuf.Add(0x0a);
         cmdBuf.AddRange(BitConverter.GetBytes((UInt32)_pid).Reverse());
@@ -327,6 +341,10 @@ public class Ratchetron(string ip) : Target(ip) {
     }
 
     public override int FreezeMemory(uint address, uint size, MemoryCondition condition, byte[] memory) {
+        if (_stream == null) {
+            throw new Exception("I ain't connected");
+        }
+        
         var cmdBuf = new List<byte>();
         cmdBuf.Add(0x0b);
         cmdBuf.AddRange(BitConverter.GetBytes((UInt32)_pid).Reverse());
@@ -354,6 +372,10 @@ public class Ratchetron(string ip) : Target(ip) {
     }
 
     public override void ReleaseSubID(int memSubID) {
+        if (_stream == null) {
+            return;
+        }
+        
         var cmdBuf = new List<byte>();
         cmdBuf.Add(0x0c);
         cmdBuf.AddRange(BitConverter.GetBytes((UInt32)memSubID).Reverse());

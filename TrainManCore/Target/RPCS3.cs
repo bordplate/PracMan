@@ -43,10 +43,10 @@ public class RPCS3(string slot) : Target(slot) {
         callback(targets);
     }
 
-    private PINE pine;
-    private List<MemorySubItem> SubItems = [];
-    private Mutex SubMutex = new(false);
-    private bool MemoryWorkerStarted = false;
+    private PINE? _pine;
+    private readonly List<MemorySubItem> _subItems = [];
+    private readonly Mutex _subMutex = new(false);
+    private bool _memoryWorkerStarted = false;
     
     public override bool Start(AttachedCallback callback) {
         // _address must be an integer
@@ -56,7 +56,7 @@ public class RPCS3(string slot) : Target(slot) {
         }
         
         try {
-            pine = new PINE(slot);
+            _pine = new PINE(slot);
             callback(true, null);
             return true;
         }
@@ -69,10 +69,10 @@ public class RPCS3(string slot) : Target(slot) {
     public override bool Stop() {
         base.Stop();
 
-        MemoryWorkerStarted = false;
+        _memoryWorkerStarted = false;
 
         try {
-            pine.Close();
+            _pine?.Close();
             return true;
         }
         catch (Exception ex) {
@@ -82,8 +82,12 @@ public class RPCS3(string slot) : Target(slot) {
     }
 
     public override int GetCurrentPID() {
+        if (_pine == null) {
+            return 0;
+        }
+        
         try {
-            var status = pine.Status();
+            var status = _pine.Status();
             return status == EmulatorStatus.SHUTDOWN ? 0 : 1;
         }
         catch {
@@ -92,8 +96,12 @@ public class RPCS3(string slot) : Target(slot) {
     }
 
     public override string GetGameTitleID() {
+        if (_pine == null) {
+            return "";
+        }
+        
         try {
-            string gameId = pine.GameId();
+            string gameId = _pine.GameId();
             return string.IsNullOrEmpty(gameId) ? "" : gameId;
         }
         catch {
@@ -110,9 +118,13 @@ public class RPCS3(string slot) : Target(slot) {
     }
 
     public override byte[] ReadMemory(uint address, uint size) {
+        if (_pine == null) {
+            throw new Exception("Not connected");
+        }
+        
         try {
             uint adjustedAddress = address;
-            return pine.Read(adjustedAddress, (int)size);
+            return _pine.Read(adjustedAddress, (int)size);
         }
         catch (Exception ex) {
             Console.WriteLine($"ReadMemory failed: {ex.Message}");
@@ -121,9 +133,13 @@ public class RPCS3(string slot) : Target(slot) {
     }
 
     public override void WriteMemory(uint address, uint size, byte[] memory) {
+        if (_pine == null) {
+            throw new Exception("Not connected");
+        }
+        
         try {
             uint adjustedAddress = address;
-            pine.Write(adjustedAddress, memory);
+            _pine.Write(adjustedAddress, memory);
         }
         catch (Exception ex) {
             Console.WriteLine($"WriteMemory failed: {ex.Message}");
@@ -131,15 +147,15 @@ public class RPCS3(string slot) : Target(slot) {
     }
 
     public override void ReleaseSubID(int memSubID) {
-        if (memSubID < 0 || memSubID >= SubItems.Count)
+        if (memSubID < 0 || memSubID >= _subItems.Count)
             return;
 
-        var subItem = SubItems[memSubID];
+        var subItem = _subItems[memSubID];
         subItem.Released = true;
 
-        SubMutex.WaitOne();
-        SubItems[memSubID] = subItem;
-        SubMutex.ReleaseMutex();
+        _subMutex.WaitOne();
+        _subItems[memSubID] = subItem;
+        _subMutex.ReleaseMutex();
     }
 
     public override int SubMemory(uint address, uint size, MemoryCondition condition, byte[] memory,
@@ -153,15 +169,15 @@ public class RPCS3(string slot) : Target(slot) {
             Freeze = false
         };
 
-        SubMutex.WaitOne();
-        SubItems.Add(item);
-        SubMutex.ReleaseMutex();
+        _subMutex.WaitOne();
+        _subItems.Add(item);
+        _subMutex.ReleaseMutex();
 
-        if (!MemoryWorkerStarted) {
+        if (!_memoryWorkerStarted) {
             StartMemorySubWorker();
         }
 
-        return SubItems.Count - 1;
+        return _subItems.Count - 1;
     }
 
     public override int FreezeMemory(uint address, uint size, MemoryCondition condition, byte[] memory) {
@@ -173,25 +189,25 @@ public class RPCS3(string slot) : Target(slot) {
             Freeze = true
         };
 
-        SubMutex.WaitOne();
-        SubItems.Add(item);
-        SubMutex.ReleaseMutex();
+        _subMutex.WaitOne();
+        _subItems.Add(item);
+        _subMutex.ReleaseMutex();
 
-        if (!MemoryWorkerStarted) {
+        if (!_memoryWorkerStarted) {
             StartMemorySubWorker();
         }
 
-        return SubItems.Count - 1;
+        return _subItems.Count - 1;
     }
 
     private void MemorySubWorker() {
-        MemoryWorkerStarted = true;
+        _memoryWorkerStarted = true;
 
-        while (MemoryWorkerStarted) {
-            SubMutex.WaitOne();
+        while (_memoryWorkerStarted) {
+            _subMutex.WaitOne();
 
-            for (int i = 0; i < SubItems.Count; i++) {
-                var item = SubItems[i];
+            for (int i = 0; i < _subItems.Count; i++) {
+                var item = _subItems[i];
 
                 if (item.Released)
                     continue;
@@ -213,16 +229,16 @@ public class RPCS3(string slot) : Target(slot) {
                         WriteMemory(item.Address, item.Size, item.SetValue);
                     }
 
-                    RunOnMainThread(() => {
-                        item.Callback?.Invoke(currentValue.Reverse().ToArray());
+                    RunOnMainThread?.Invoke(() => {
+                        item.Callback.Invoke(currentValue.Reverse().ToArray());
                     });
                 }
 
                 item.LastValue = currentValue;
-                SubItems[i] = item;
+                _subItems[i] = item;
             }
 
-            SubMutex.ReleaseMutex();
+            _subMutex.ReleaseMutex();
             Thread.Sleep(1000 / 120); // Adjust as needed
         }
     }
@@ -233,6 +249,6 @@ public class RPCS3(string slot) : Target(slot) {
     }
 
     private void StopMemorySubWorker() {
-        MemoryWorkerStarted = false;
+        _memoryWorkerStarted = false;
     }
 }
