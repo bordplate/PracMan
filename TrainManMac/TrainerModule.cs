@@ -86,7 +86,7 @@ public class TrainerModule: ITrainer {
 
     public void ActivateMenu() {
         NSApplication.SharedApplication.MainMenu = MainMenu;
-        NSApplication.SharedApplication.WindowsMenu = WindowsMenu.Submenu;
+        NSApplication.SharedApplication.WindowsMenu = WindowsMenu.Submenu!;
         NSApplication.SharedApplication.HelpMenu = HelpMenu.Submenu;
     }
     

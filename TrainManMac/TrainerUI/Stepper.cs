@@ -5,12 +5,12 @@ namespace TrainMan.TrainerUI;
 
 // Numeric stepper. NSTextField with NSStepper on the right.
 public class Stepper: NSView, IStepper {
-    public IWindow Window { get; }
+    public new IWindow Window { get; }
     
-    private NSTextField _textField;
-    private NSStepper _stepper;
+    private readonly NSTextField _textField;
+    private readonly NSStepper _stepper;
     
-    private LuaFunction _callback;
+    private readonly LuaFunction _callback;
 
     public Stepper(IWindow window, int minValue, int maxValue, int step, LuaFunction callback) {
         Window = window;
@@ -67,7 +67,7 @@ public class Stepper: NSView, IStepper {
 }
 
 public class NumberFormatter : NSNumberFormatter {
-    private NSString lastValidString;
+    private NSString _lastValidString = new NSString("");
     
     public NumberFormatter(int minValue, int maxValue) {
         FormatterBehavior = NSNumberFormatterBehavior.Version_10_4;
@@ -78,7 +78,6 @@ public class NumberFormatter : NSNumberFormatter {
     }
     
     
-
     [Export ("isPartialStringValid:newEditingString:errorDescription:")]
     public bool IsPartialStringValidNewEditingStringErrorDescription(NSString partialString, ref NSString newString, ref NSString error) {
         if (partialString.Length == 0) {
@@ -93,13 +92,13 @@ public class NumberFormatter : NSNumberFormatter {
             return false;
         }
         
-        if (value < Minimum.Int32Value || value > Maximum.Int32Value) {
-            newString = lastValidString;
+        if (value < Minimum!.Int32Value || value > Maximum!.Int32Value) {
+            newString = _lastValidString;
             
             return false;
         }
         
-        lastValidString = newString;
+        _lastValidString = newString;
     
         return true;
         

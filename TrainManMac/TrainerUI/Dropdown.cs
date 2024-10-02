@@ -33,10 +33,9 @@ public class Dropdown: NSPopUpButton, IDropdown {
             var item = options[key];
 
             if (item is LuaTable table) {
-                var index = table[1] as long?;
-                var value = table[2] as string;
-                
-                items.Add((int)index, value);
+                if (table[1] is long index && table[2] is string value) {
+                    items.Add((int)index, value);                    
+                }
             } else {
                 items.Add((int)(long)key, (string)options[key]);
             }
@@ -56,7 +55,7 @@ public class Dropdown: NSPopUpButton, IDropdown {
             AddItem(item.Value);
         }
         
-        SetTitle(_items.Values.First());
+        SetTitle(_items.Values.FirstOrDefault() ?? "");
     }
     
     public void SetSelectedIndex(int index) {

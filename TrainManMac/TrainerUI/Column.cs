@@ -4,7 +4,7 @@ using TrainManCore.Scripting.UI;
 namespace TrainMan.TrainerUI;
 
 public class Column: Container {
-    public Column(IWindow window) : base() {
+    public Column(IWindow window) : base(window) {
         Window = window;
         
         TranslatesAutoresizingMaskIntoConstraints = false;

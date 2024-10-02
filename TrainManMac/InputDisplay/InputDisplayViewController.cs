@@ -13,11 +13,11 @@ namespace TrainMan;
 public class InputDisplayViewController : NSViewController {
     public NSWindow Window;
 
-    public InputDisplayView InputDisplayView;
+    private readonly InputDisplayView _inputDisplayView;
 
     public InputDisplayViewController(Inputs inputs) {
-        InputDisplayView = new InputDisplayView(inputs);
-        var viewFrame = InputDisplayView.Frame;
+        _inputDisplayView = new InputDisplayView(inputs);
+        var viewFrame = _inputDisplayView.Frame;
 
         View.Frame = viewFrame;
 
@@ -37,114 +37,27 @@ public class InputDisplayViewController : NSViewController {
     public override void ViewDidLoad() {
         base.ViewDidLoad();
 
-        View.AddSubview(InputDisplayView);
+        View.AddSubview(_inputDisplayView);
     }
 }
 
 public class InputDisplayView : NSView {
-    private Inputs _inputs;
+    private readonly Inputs _inputs;
     private Inputs.InputState _currentInputs = new();
+    private ControllerSkin _controllerSkin;
     
     public InputDisplayView(Inputs inputs) {
         _inputs = inputs;
         
-        Initialize();
-    }
-    
-    public struct InputPlot {
-        public int drawX { get; set; }
-        public int drawY { get; set; }
-        public int spriteX { get; set; }
-        public int spriteY { get; set; }
-        public int spriteWidth { get; set; }
-        public int spriteHeight { get; set; }
-    }
+        string skinPath = "controllerskins/default";
+        _controllerSkin = new ControllerSkin(skinPath);
 
-    class ControllerSkin {
-        public NSImage image;
-        public Dictionary<string, InputPlot> buttons;
-        public int analogPitch = 32;
-
-        public static ControllerSkin Load(string skinPath) {
-            var skin = new ControllerSkin();
-            skin.buttons = new Dictionary<string, InputPlot>();
-            
-            skinPath = Path.Combine(Environment.GetEnvironmentVariable("TRAINMAN_ROOT"), skinPath);
-
-            var config = File.ReadAllText(Path.Combine(skinPath, "skin.txt"));
-
-            foreach (var line in config.Split('\n')) {
-                if (line.Length < 2 || line[0] == '#')
-                    continue;
-
-                var components = line.Split(':');
-                if (components.Length < 2)
-                    continue;
-
-                string buttonName = components[0];
-
-                if (buttonName == "imageName") {
-                    var image = NSBitmapImageRep.ImageRepsFromFile(Path.Combine(skinPath, components[1].Trim()))[0];
-
-                    skin.image = new NSImage(Path.Combine(skinPath, components[1].Trim()));
-
-                    skin.image.Size = new CGSize(image.PixelsWide, image.PixelsHigh);
-
-                    continue;
-                }
-
-                if (buttonName == "analogPitch") {
-                    skin.analogPitch = int.Parse(components[1].Trim());
-                    continue;
-                }
-
-                var plot = components[1]
-                    .Split(',')
-                    .Select(thing => int.Parse(thing.Trim()))
-                    .ToArray();
-
-                if (plot.Length < 6)
-                    continue;
-
-                var inputPlot = new InputPlot {
-                    drawX = plot[0],
-                    drawY = plot[1],
-                    spriteX = plot[2],
-                    spriteY = plot[3],
-                    spriteWidth = plot[4],
-                    spriteHeight = plot[5]
-                };
-
-                skin.buttons[buttonName] = inputPlot;
-            }
-
-            return skin;
-        }
-    }
-    
-    private ControllerSkin controllerSkin;
-
-    public InputDisplayView() {
-        Initialize();
-    }
-
-    public InputDisplayView(IntPtr handle) : base(handle) {
-        Initialize();
-    }
-
-    private void Initialize() {
-        // Load the controller skin
-        string skinPath = "controllerskins/default"; // Adjust the path as needed
-        controllerSkin = ControllerSkin.Load(skinPath);
-
-        // Set the view size to the image size
-        Frame = new CGRect(0, 0, controllerSkin.buttons["base"].spriteWidth,
-            controllerSkin.buttons["base"].spriteHeight);
+        Frame = new CGRect(0, 0, _controllerSkin.Buttons["base"].SpriteWidth,
+            _controllerSkin.Buttons["base"].SpriteHeight);
 
         WantsLayer = true;
-        Layer.BackgroundColor = NSColor.Purple.CGColor;
+        Layer!.BackgroundColor = NSColor.Purple.CGColor;
 
-        // Start the timer to refresh the view
         _inputs.OnInput += TimerTick;
     }
 
@@ -157,11 +70,15 @@ public class InputDisplayView : NSView {
     public override void DrawRect(CGRect dirtyRect) {
         base.DrawRect(dirtyRect);
 
+        if (NSGraphicsContext.CurrentContext == null) {
+            return;
+        }
+
         var context = NSGraphicsContext.CurrentContext.GraphicsPort;
 
-        NSImage sprite = controllerSkin.image;
+        NSImage sprite = _controllerSkin.Image;
 
-        var buttons = controllerSkin.buttons;
+        var buttons = _controllerSkin.Buttons;
 
         // Replace with your actual Inputs implementation
         var inputs = _currentInputs;
@@ -197,11 +114,11 @@ public class InputDisplayView : NSView {
     }
 
     private void DrawButton(NSImage sprite, InputPlot plot, CGContext context) {
-        var flippedDrawY = (int)(Frame.Height - plot.drawY - plot.spriteHeight);
-        var flippedSpriteY = (int)(sprite.Size.Height - plot.spriteY - plot.spriteHeight);
+        var flippedDrawY = (int)(Frame.Height - plot.DrawY - plot.SpriteHeight);
+        var flippedSpriteY = (int)(sprite.Size.Height - plot.SpriteY - plot.SpriteHeight);
 
-        var destRect = new CGRect(plot.drawX, flippedDrawY, plot.spriteWidth, plot.spriteHeight);
-        var sourceRect = new CGRect(plot.spriteX, flippedSpriteY, plot.spriteWidth, plot.spriteHeight);
+        var destRect = new CGRect(plot.DrawX, flippedDrawY, plot.SpriteWidth, plot.SpriteHeight);
+        var sourceRect = new CGRect(plot.SpriteX, flippedSpriteY, plot.SpriteWidth, plot.SpriteHeight);
 
         sprite.Draw(destRect, sourceRect, NSCompositingOperation.SourceOver, 1.0f);
     }
@@ -216,14 +133,14 @@ public class InputDisplayView : NSView {
         // Apparently we accidentally inverted pressedPlot and normalPlot
         var plot = isPressed ? normalPlot : pressedPlot;
 
-        var flippedDrawY = (int)(Frame.Height - plot.drawY - plot.spriteHeight);
-        var flippedSpriteY = (int)(sprite.Size.Height - plot.spriteY - plot.spriteHeight);
+        var flippedDrawY = (int)(Frame.Height - plot.DrawY - plot.SpriteHeight);
+        var flippedSpriteY = (int)(sprite.Size.Height - plot.SpriteY - plot.SpriteHeight);
 
-        var adjustedX = (xAxis * controllerSkin.analogPitch);
-        var adjustedY = flippedDrawY - (yAxis * controllerSkin.analogPitch);
+        var adjustedX = (xAxis * _controllerSkin.AnalogPitch);
+        var adjustedY = flippedDrawY - (yAxis * _controllerSkin.AnalogPitch);
 
-        var destRect = new CGRect(adjustedX + plot.drawX, adjustedY, plot.spriteWidth, plot.spriteHeight);
-        var sourceRect = new CGRect(plot.spriteX, flippedSpriteY, plot.spriteWidth, plot.spriteHeight);
+        var destRect = new CGRect(adjustedX + plot.DrawX, adjustedY, plot.SpriteWidth, plot.SpriteHeight);
+        var sourceRect = new CGRect(plot.SpriteX, flippedSpriteY, plot.SpriteWidth, plot.SpriteHeight);
 
         sprite.Draw(destRect, sourceRect, NSCompositingOperation.SourceOver, 1.0f);
     }

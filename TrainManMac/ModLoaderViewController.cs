@@ -4,24 +4,80 @@ using TrainManCore.Target;
 namespace TrainMan;
 
 public class ModLoaderViewController: NSViewController, INSTableViewDataSource, INSTableViewDelegate {
-    public NSWindow Window;
+    public readonly NSWindow Window;
 
-    private Target _target;
-    private List<Module> _mods = [];
+    private readonly Target _target;
+    private List<Module> _mods;
+
+    private readonly NSTableView _modsTableView;
     
-    private NSTableView _modsTableView;
-    
-    private NSTextField _modNameTextField;
-    private NSTextField _modAuthorTextField;
-    private NSTextField _modVersionTextField;
-    private NSTextField _modLinkTextField;
-    private NSTextField _modDescriptionTextField;
+    private readonly NSTextField _modNameTextField;
+    private readonly NSTextField _modAuthorTextField;
+    private readonly NSTextField _modVersionTextField;
+    private readonly NSTextField _modLinkTextField;
+    private readonly NSTextField _modDescriptionTextField;
     
     public ModLoaderViewController(Target target) : base() {
         _target = target;
 
         _mods = Module.ModulesForTitle(target.GetGameTitleID(), target);
         
+        _modsTableView = new NSTableView {
+            TranslatesAutoresizingMaskIntoConstraints = false,
+            UsesAlternatingRowBackgroundColors = true,
+            AllowsColumnResizing = false,
+            AllowsColumnReordering = false,
+            AllowsMultipleSelection = false,
+            DataSource = this,
+            Delegate = this,
+        };
+        
+        _modNameTextField = new NSTextField {
+            TranslatesAutoresizingMaskIntoConstraints = false,
+            PlaceholderString = "N/A",
+            DrawsBackground = false,
+            Editable = false,
+            Bordered = false,
+            Selectable = true,
+        };
+        
+        _modAuthorTextField = new NSTextField {
+            TranslatesAutoresizingMaskIntoConstraints = false,
+            PlaceholderString = "N/A",
+            DrawsBackground = false,
+            Editable = false,
+            Bordered = false,
+            Selectable = true,
+        };
+        
+        _modVersionTextField = new NSTextField {
+            PlaceholderString = "N/A",
+            DrawsBackground = false,
+            Editable = false,
+            Bordered = false,
+            Selectable = true,
+        };
+        
+        _modLinkTextField = new NSTextField {
+            PlaceholderString = "N/A",
+            DrawsBackground = false,
+            Editable = false,
+            Bordered = false,
+            Selectable = true,
+        };
+        
+        _modDescriptionTextField = new NSTextField {
+            TranslatesAutoresizingMaskIntoConstraints = false,
+            PlaceholderString = "No description",
+            DrawsBackground = false,
+            Editable = false,
+            Bordered = false,
+            Selectable = true,
+            UsesSingleLineMode = false,
+            LineBreakMode = NSLineBreakMode.ByWordWrapping,
+            MaximumNumberOfLines = 0,
+        };
+
         Window = new NSWindow(
             CGRect.Empty, 
             NSWindowStyle.Titled | NSWindowStyle.Closable | NSWindowStyle.Miniaturizable | NSWindowStyle.Resizable, 
@@ -41,15 +97,6 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
         
         View.SetFrameSize(new CGSize(150, 150));
 
-        _modsTableView = new NSTableView {
-            TranslatesAutoresizingMaskIntoConstraints = false,
-            UsesAlternatingRowBackgroundColors = true,
-            AllowsColumnResizing = false,
-            AllowsColumnReordering = false,
-            AllowsMultipleSelection = false,
-            DataSource = this,
-            Delegate = this,
-        };
         
         // Check column should not be resizable
         var checkColumn = new NSTableColumn("Check") {
@@ -89,15 +136,6 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
             ColumnSpacing = 10,
         };
 
-        _modNameTextField = new NSTextField {
-            TranslatesAutoresizingMaskIntoConstraints = false,
-            PlaceholderString = "N/A",
-            DrawsBackground = false,
-            Editable = false,
-            Bordered = false,
-            Selectable = true,
-        };
-
         modInfoGrid.AddRow([
             new NSTextField {
                 TranslatesAutoresizingMaskIntoConstraints = false,
@@ -109,15 +147,6 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
             _modNameTextField
         ]);
         
-        _modAuthorTextField = new NSTextField {
-            TranslatesAutoresizingMaskIntoConstraints = false,
-            PlaceholderString = "N/A",
-            DrawsBackground = false,
-            Editable = false,
-            Bordered = false,
-            Selectable = true,
-        };
-        
         modInfoGrid.AddRow([
             new NSTextField {
                 TranslatesAutoresizingMaskIntoConstraints = false,
@@ -128,14 +157,6 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
             }, 
             _modAuthorTextField
         ]);
-
-        _modVersionTextField = new NSTextField {
-            PlaceholderString = "N/A",
-            DrawsBackground = false,
-            Editable = false,
-            Bordered = false,
-            Selectable = true,
-        };
         
         modInfoGrid.AddRow([
             new NSTextField {
@@ -147,14 +168,6 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
             }, 
             _modVersionTextField
         ]);
-        
-        _modLinkTextField = new NSTextField {
-            PlaceholderString = "N/A",
-            DrawsBackground = false,
-            Editable = false,
-            Bordered = false,
-            Selectable = true,
-        };
         
         modInfoGrid.AddRow([
             new NSTextField {
@@ -175,19 +188,6 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
         
         var descriptionView = new NSView {
             TranslatesAutoresizingMaskIntoConstraints = false,
-        };
-        
-        // Add a multi-line text field for the description
-        _modDescriptionTextField = new NSTextField {
-            TranslatesAutoresizingMaskIntoConstraints = false,
-            PlaceholderString = "No description",
-            DrawsBackground = false,
-            Editable = false,
-            Bordered = false,
-            Selectable = true,
-            UsesSingleLineMode = false,
-            LineBreakMode = NSLineBreakMode.ByWordWrapping,
-            MaximumNumberOfLines = 0,
         };
         
         horizontalStackView.AddArrangedSubview(descriptionView);
@@ -285,7 +285,7 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
                 Bordered = false,
                 Editable = false,
                 Selectable = false,
-                StringValue = mod.Settings.Get("General.name", "N/A"),
+                StringValue = mod.Settings.Get("General.name", "N/A")!,
             };
             
             cell.AddSubview(textField);
@@ -299,7 +299,10 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
     }
     
     public void SelectionDidChange(NSNotification notification) {
-        var tableView = notification.Object as NSTableView;
+        if (notification.Object is not NSTableView tableView) {
+            return;
+        }
+
         int row = (int)tableView.SelectedRow;
         
         if (row < 0) {
@@ -308,11 +311,11 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
         
         var mod = _mods[row];
         
-        _modNameTextField.StringValue = mod.Settings.Get("General.name", "");
-        _modAuthorTextField.StringValue = mod.Settings.Get("General.author", "");
-        _modVersionTextField.StringValue = mod.Settings.Get("General.version", "");
-        _modLinkTextField.StringValue = mod.Settings.Get("General.link", "");
-        _modDescriptionTextField.StringValue = mod.Settings.Get("General.description", "");
+        _modNameTextField.StringValue = mod.Settings.Get("General.name", "")!;
+        _modAuthorTextField.StringValue = mod.Settings.Get("General.author", "")!;
+        _modVersionTextField.StringValue = mod.Settings.Get("General.version", "")!;
+        _modLinkTextField.StringValue = mod.Settings.Get("General.link", "")!;
+        _modDescriptionTextField.StringValue = mod.Settings.Get("General.description", "")!;
     }
     
     public void WindowDidBecomeKey(object? sender, EventArgs eventArgs) {
@@ -324,15 +327,19 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
         base.ViewWillDisappear();
 
         var appDelegate = (AppDelegate)NSApplication.SharedApplication.Delegate;
+        var modules = appDelegate.ModulesForTarget(_target) ?? [];
 
-        if (appDelegate.ModulesForTarget(_target).Count == 0) {
+        if (modules.Count == 0) {
             _target.Stop();
         }
     }
     
     [Export("checkBoxClicked:")]
     public void CheckBoxClicked(NSObject sender) {
-        var checkBox = sender as NSButton;
+        if (sender is not NSButton checkBox) {
+            return;
+        }
+        
         int row = (int)checkBox.Tag;
         bool isChecked = checkBox.State == NSCellStateValue.On;
         
@@ -343,9 +350,9 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
             
             // Replace the mod instance with a fresh one
             var allModules = Module.ModulesForTitle(_target.GetGameTitleID(), _target);
-            var newInstance = allModules.Find(m => m.ModulePath == _mods[row].ModulePath);
-
-            _mods[row] = newInstance;
+            if (allModules.Find(m => m.ModulePath == _mods[row].ModulePath) is {} newInstance) {
+                _mods[row] = newInstance;
+            }
         }
     }
 }

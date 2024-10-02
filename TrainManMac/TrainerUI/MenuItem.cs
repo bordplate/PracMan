@@ -5,8 +5,9 @@ namespace TrainMan.TrainerUI;
 
 public class MenuItem: NSMenuItem, IMenuItem {
     public IWindow Window { get; }
-    private Action _callback;
-    private Action<bool> _checkCallback;
+    
+    private Action? _callback;
+    private Action<bool>? _checkCallback;
     public bool IsCheckable { get; set; }
 
     public bool Checked {
@@ -17,6 +18,8 @@ public class MenuItem: NSMenuItem, IMenuItem {
     }
 
     public MenuItem(IWindow window, string title, Action callback) {
+        Window = window;
+        
         _callback = callback;
         IsCheckable = false;
         
@@ -40,11 +43,11 @@ public class MenuItem: NSMenuItem, IMenuItem {
         if (IsCheckable) {
             State = State == NSCellStateValue.On ? NSCellStateValue.Off : NSCellStateValue.On;
 
-            _checkCallback(State == NSCellStateValue.On);
+            _checkCallback?.Invoke(State == NSCellStateValue.On);
 
             return;
         }
         
-        _callback();
+        _callback?.Invoke();
     }
 }

@@ -1,25 +1,38 @@
 using System.Reflection;
 using TrainManCore.Target;
-using TrainManCore.Scripting;
 using Module = TrainManCore.Scripting.Module;
 
 namespace TrainMan;
 
 [Register("AttachWindowController")]
 public class AttachViewController: NSViewController {
-    public NSWindow Window;
+    public readonly NSWindow Window;
     
-    private List<Type> _targets = [];
-    private Type _targetType;
+    private readonly List<Type> _targets = [];
+    private Type _targetType = null!;
 
-    private AttachComboBox _targetComboBox;
-    private NSButton _attachButton;
+    private readonly AttachComboBox _targetComboBox;
+    private readonly NSButton _attachButton;
     
-    public AttachViewController() : base() {
+    public AttachViewController() {
         _targets.Add(typeof(Ratchetron));
         _targets.Add(typeof(RPCS3));
         _targets.Add(typeof(DummyTarget));
-
+        
+        _targetComboBox = new AttachComboBox {
+            TranslatesAutoresizingMaskIntoConstraints = false,
+            Action = new ObjCRuntime.Selector("comboBoxAction:"),
+            Target = this
+        };
+        
+        _attachButton = new NSButton {
+            Title = "Attach",
+            BezelStyle = NSBezelStyle.Rounded,
+            TranslatesAutoresizingMaskIntoConstraints = false,
+            Action = new ObjCRuntime.Selector("attachButtonClicked:"),
+            Target = this
+        };
+        
         Window = new NSWindow(
             CGRect.Empty, 
             NSWindowStyle.Titled | NSWindowStyle.Closable | NSWindowStyle.Miniaturizable, 
@@ -60,21 +73,7 @@ public class AttachViewController: NSViewController {
         
         View.AddSubview(segmentedControl);
         
-        _targetComboBox = new AttachComboBox {
-            TranslatesAutoresizingMaskIntoConstraints = false,
-            Action = new ObjCRuntime.Selector("comboBoxAction:"),
-            Target = this
-        };
-        
         View.AddSubview(_targetComboBox);
-        
-        _attachButton = new NSButton {
-            Title = "Attach",
-            BezelStyle = NSBezelStyle.Rounded,
-            TranslatesAutoresizingMaskIntoConstraints = false,
-            Action = new ObjCRuntime.Selector("attachButtonClicked:"),
-            Target = this
-        };
         View.AddSubview(_attachButton);
         
         var views = new NSDictionary("comboBox", _targetComboBox, "button", _attachButton, "segmentedControl", segmentedControl);
@@ -166,7 +165,7 @@ public class AttachViewController: NSViewController {
                 Window.Close();
             } else {
                 alert.MessageText = "Failed to attach";
-                alert.InformativeText = message;
+                alert.InformativeText = message ?? "";
                 
                 alert.RunSheetModal(Window);
             }
@@ -197,35 +196,34 @@ public class AttachViewController: NSViewController {
     }
     
     private string InvokeStaticNameMethod(Type targetType) {
-        MethodInfo nameMethod = targetType.GetMethod("Name", BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-        
-        if (nameMethod != null) {
-            return (string)nameMethod.Invoke(null, null);
+        ArgumentNullException.ThrowIfNull(targetType);
+
+        if (targetType.GetMethod("Name", BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy) is
+            not { } nameMethod) {
+            throw new InvalidOperationException($"{targetType.Name} does not have a Name method");
         }
         
-        throw new InvalidOperationException($"{targetType.Name} does not have a Name method");
+        return (string)nameMethod.Invoke(null, null)!;
     }
     
     private void InvokeStaticDiscoverTargetsMethod(Type targetType, Target.DicoveredTargetsCallback callback) {
-        MethodInfo discoverTargetsMethod = targetType.GetMethod("DiscoverTargets", BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-        
-        if (discoverTargetsMethod != null) {
-            discoverTargetsMethod.Invoke(null, [callback]);
+        if (targetType.GetMethod("DiscoverTargets", BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy) is not { } discoverTargetsMethod) {
+            return;
         }
+        
+        discoverTargetsMethod.Invoke(null, [callback]);
     }
     
     private string InvokeStaticPlaceholderAddressMethod(Type targetType) {
-        MethodInfo placeholderAddressMethod = targetType.GetMethod("PlaceholderAddress", BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-        
-        if (placeholderAddressMethod != null) {
-            return (string)placeholderAddressMethod.Invoke(null, null);
+        if (targetType.GetMethod("PlaceholderAddress", BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy) is not { } placeholderAddressMethod) {
+            throw new InvalidOperationException($"{targetType.Name} does not have a PlaceholderAddress method");
         }
         
-        throw new InvalidOperationException($"{targetType.Name} does not have a PlaceholderAddress method");
+        return (string)placeholderAddressMethod.Invoke(null, null)!;
     }
     
     private Target CreateTargetInstance(string targetAddress) {
-        return (Target)Activator.CreateInstance(_targetType, [targetAddress]);
+        return (Target)Activator.CreateInstance(_targetType, targetAddress)!;
     }
 }
 
@@ -297,10 +295,12 @@ public class AttachComboBox : NSComboBox, INSComboBoxDelegate, INSComboBoxDataSo
     // Prevent selecting section titles or seperators by intercepting the selection change
     [Export("comboBoxSelectionIsChanging:")]
     public void SelectionIsChanging(NSNotification notification) {
-        var comboBox = notification.Object as NSComboBox;
-        var selectedIndex = comboBox.SelectedIndex;
+        if (notification.Object is not NSComboBox comboBox) {
+            return;
+        }
         
-        if ((nint)selectedIndex >= 0 && _allItems[(int)selectedIndex].IsSectionTitle) {
+        var selectedIndex = comboBox.SelectedIndex;
+        if (selectedIndex >= 0 && _allItems[(int)selectedIndex].IsSectionTitle) {
             comboBox.DeselectItem(selectedIndex);
         }
     }

@@ -7,11 +7,16 @@ namespace TrainMan;
 public class AppDelegate : NSApplicationDelegate {
     public AttachViewController AttachViewController = new();
 
-    public NSMenu MainMenu;
+    public NSMenu MainMenu = new NSMenu();
     public NSMenuItem WindowsMenu;
     public NSMenuItem HelpMenu;
     
     private Dictionary<Target, Dictionary<string, object>> _activeTargets = new();
+
+    public AppDelegate() {
+        WindowsMenu = CreateWindowMenuItem();
+        HelpMenu = CreateHelpMenuItem();
+    }
     
     public override void DidFinishLaunching(NSNotification notification) {
         CreateMenu();
@@ -102,26 +107,22 @@ public class AppDelegate : NSApplicationDelegate {
     }
 
     void CreateMenu() {
-        MainMenu = new NSMenu();
         MainMenu.AddItem(CreateAppMenuItem());
 
         MainMenu.AddItem(CreateEditMenuItem());
-
-        WindowsMenu = CreateWindowMenuItem();
+        
         MainMenu.AddItem(WindowsMenu);
-
-        HelpMenu = CreateHelpMenuItem();
         MainMenu.AddItem(HelpMenu);
 
         // Assign the main menu to the application
         NSApplication.SharedApplication.MainMenu = MainMenu;
         NSApplication.SharedApplication.HelpMenu = HelpMenu.Submenu;
-        NSApplication.SharedApplication.WindowsMenu = WindowsMenu.Submenu;
+        NSApplication.SharedApplication.WindowsMenu = WindowsMenu.Submenu!;
     }
     
     public void ActivateMenu() {
         NSApplication.SharedApplication.MainMenu = MainMenu;
-        NSApplication.SharedApplication.WindowsMenu = WindowsMenu.Submenu;
+        NSApplication.SharedApplication.WindowsMenu = WindowsMenu.Submenu!;
         NSApplication.SharedApplication.HelpMenu = HelpMenu.Submenu;
     }
     
@@ -146,29 +147,31 @@ public class AppDelegate : NSApplicationDelegate {
             _activeTargets[target]["Modules"] = new List<Module>();
         }
         
-        var modules = _activeTargets[target]["Modules"] as List<Module>;
-        modules.Add(module);
+        if (_activeTargets[target]["Modules"] is List<Module> modules) {
+            modules.Add(module);
+        }
     }
     
     public void RemoveModuleForTarget(Module module, Target target) {
-        if (!_activeTargets.ContainsKey(target)) {
+        if (!_activeTargets.TryGetValue(target, out var activeTarget)) {
             throw new Exception("Target not found.");
         }
         
-        if (!_activeTargets[target].ContainsKey("Modules")) {
+        if (!activeTarget.ContainsKey("Modules")) {
             throw new Exception("No modules found for target.");
         }
         
-        var modules = _activeTargets[target]["Modules"] as List<Module>;
-        modules.Remove(module);
+        if (_activeTargets[target]["Modules"] is List<Module> modules) {
+            modules.Add(module);
+        }
     }
     
     public List<Module>? ModulesForTarget(Target target) {
-        if (!_activeTargets.ContainsKey(target)) {
+        if (!_activeTargets.TryGetValue(target, out var activeTarget)) {
             return null;
         }
         
-        if (!_activeTargets[target].ContainsKey("Modules")) {
+        if (!activeTarget.ContainsKey("Modules")) {
             return new();
         }
         
@@ -193,22 +196,19 @@ public class AppDelegate : NSApplicationDelegate {
     }
 
     public ModLoaderViewController ModLoaderFor(Target target) {
-        if (!_activeTargets.ContainsKey(target)) {
-            throw new Exception("Target not found.");
-        }
-        
         if (_activeTargets[target].ContainsKey("ModLoader")) {
             // Reopen the mod loader
-            var modLoader = _activeTargets[target]["ModLoader"] as ModLoaderViewController;
-            return modLoader;
-        } else {
-            // Create a new mod loader
-            var modLoader = new ModLoaderViewController(target);
-
-            _activeTargets[target]["ModLoader"] = modLoader;
-            
-            return modLoader;
+            if (_activeTargets[target]["ModLoader"] is ModLoaderViewController modLoader) {
+                return modLoader;
+            }
         }
+        
+        // Create a new mod loader
+        var loader = new ModLoaderViewController(target);
+
+        _activeTargets[target]["ModLoader"] = loader;
+        
+        return loader;
     }
 
     public void EnableModForTarget(Module module, Target target) {
@@ -232,31 +232,33 @@ public class AppDelegate : NSApplicationDelegate {
             });
                             
             if (module.Settings.Get<string>("General.inputs_controller", "") != "") {
-                menu.AddSeparator();
+                if (module.LoadInputs() is { } inputs) {
+                    menu.AddSeparator();
+                    
+                    menu.AddItem("Input display", () => {
+                        if (trainerModule.InputDisplayViewController == null) {
+                            trainerModule.InputDisplayViewController = new InputDisplayViewController(inputs);
+                        }
+                                        
+                        trainerModule.InputDisplayViewController.Window.MakeKeyAndOrderFront(null);
+                    });
                 
-                menu.AddItem("Input display", () => {
-                    if (trainerModule.InputDisplayViewController == null) {
-                        trainerModule.InputDisplayViewController = new InputDisplayViewController(module.LoadInputs());
-                    }
-                                    
-                    trainerModule.InputDisplayViewController.Window.MakeKeyAndOrderFront(null);
-                });
-                
-                var inputs = module.LoadInputs();
-                var buttonCombosCheckItem = menu.AddCheckItem("Enable button combos", enabled => {
-                    if (enabled) {
-                        inputs.EnableButtonCombos();
-                    } else {
-                        inputs.DisableButtonCombos();
-                    }
-                });
+                    var buttonCombosCheckItem = menu.AddCheckItem("Enable button combos", enabled => {
+                        if (enabled) {
+                            inputs.EnableButtonCombos();
+                        }
+                        else {
+                            inputs.DisableButtonCombos();
+                        }
+                    });
 
-                buttonCombosCheckItem.Checked = inputs.ButtonCombosListening;
+                    buttonCombosCheckItem.Checked = inputs.ButtonCombosListening;
 
-                menu.AddItem("Configure button combos...", () => {
-                    var buttonCombosViewController = new ButtonCombosViewController(module.LoadInputs());
-                    buttonCombosViewController.Window.MakeKeyAndOrderFront(null);
-                });
+                    menu.AddItem("Configure button combos...", () => {
+                        var buttonCombosViewController = new ButtonCombosViewController(inputs);
+                        buttonCombosViewController.Window.MakeKeyAndOrderFront(null);
+                    });
+                }
             }
         });
         

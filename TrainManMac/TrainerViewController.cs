@@ -19,7 +19,7 @@ public class TrainerViewController: NSViewController, IWindow {
 
     private Module _module;
 
-    private NSMenu _menu;
+    private NSMenu? _menu;
     private List<Button> _buttons = [];
     
     public TrainerViewController(bool isMainWindow, string className, Module module) : base() {
@@ -27,7 +27,14 @@ public class TrainerViewController: NSViewController, IWindow {
         
         _module = module;
         _isMainWindow = isMainWindow;
-
+        
+        _stackView = new NSStackView() {
+            TranslatesAutoresizingMaskIntoConstraints = false,
+            Orientation = NSUserInterfaceLayoutOrientation.Horizontal,
+            Distribution = NSStackViewDistribution.FillEqually,
+            Spacing = 0,
+        };
+        
         Window = new NSWindow(
             CGRect.Empty, 
             NSWindowStyle.Titled | NSWindowStyle.Closable | NSWindowStyle.Miniaturizable | NSWindowStyle.Resizable, 
@@ -40,8 +47,8 @@ public class TrainerViewController: NSViewController, IWindow {
         Window.Center();
         
         Window.DidBecomeKey += (sender, e) => {
-            if (_isMainWindow) {
-                ((TrainerModule)_module.TrainerDelegate).ActivateMenu();
+            if (_isMainWindow && _module.TrainerDelegate is TrainerModule trainerModule) {
+                trainerModule.ActivateMenu();
             }
         };
     }
@@ -50,13 +57,6 @@ public class TrainerViewController: NSViewController, IWindow {
         base.ViewDidLoad();
         
         View.SetFrameSize(new CGSize(0, 0));
-
-        _stackView = new NSStackView() {
-            TranslatesAutoresizingMaskIntoConstraints = false,
-            Orientation = NSUserInterfaceLayoutOrientation.Horizontal,
-            Distribution = NSStackViewDistribution.FillEqually,
-            Spacing = 0,
-        };
         
         View.AddSubview(_stackView);
         View.AddConstraints(NSLayoutConstraint.FromVisualFormat("H:|[stackView]|", NSLayoutFormatOptions.None, null, new NSDictionary("stackView", _stackView)));

@@ -3,6 +3,7 @@
         <TargetFramework>net8.0-macos</TargetFramework>
         <OutputType>Exe</OutputType>
         <Nullable>enable</Nullable>
+        <WarningsAsErrors>Nullable</WarningsAsErrors>
         <ImplicitUsings>true</ImplicitUsings>
         <SupportedOSPlatformVersion>10.15</SupportedOSPlatformVersion>
         <RootNamespace>TrainMan</RootNamespace>

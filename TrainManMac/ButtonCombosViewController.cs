@@ -6,38 +6,31 @@ using TrainManCore.Scripting.UI;
 namespace TrainMan;
 
 public class ButtonCombosViewController: NSViewController, INSTableViewDelegate, INSTableViewDataSource, IButtonListener {
-    public NSWindow Window;
+    public readonly NSWindow Window;
 
-    private Inputs _inputs;
+    private readonly Inputs _inputs;
     private bool _shouldReactivateButtonCombos;
-    private NSTableView _combosTableView;
     
-    private IButton _selectedButton;
+    private readonly NSTableView _combosTableView;
+    private readonly NSSegmentedControl _segmentedControl;
     
-    private NSSegmentedControl _segmentedControl;
-
-    private NSTextField _selectButtonLabel;
-    private NSTextField _selectComboLabel;
+    private NSTextField? _selectButtonLabel;
+    private NSTextField? _selectComboLabel;
     
-    private HashSet<Inputs.Buttons> _currentCombo = new();
+    private IButton? _selectedButton;
+    private HashSet<Inputs.Buttons> _currentCombo = [];
     
     public ButtonCombosViewController(Inputs inputs) {
         _inputs = inputs;
         
-        Window = new NSWindow(
-            CGRect.Empty, 
-            NSWindowStyle.Titled | NSWindowStyle.Closable | NSWindowStyle.Miniaturizable | NSWindowStyle.Resizable, 
-            NSBackingStore.Buffered, 
-            true) {
-            Title = $"Configure button combos",
-            ContentViewController = this,
+        // Add a segmented control to the bottom of the table view for + and - buttons
+        _segmentedControl = new NSSegmentedControl {
+            TranslatesAutoresizingMaskIntoConstraints = false,
+            SegmentStyle = NSSegmentStyle.SmallSquare,
+            TrackingMode = NSSegmentSwitchTracking.Momentary,
+            SegmentCount = 3,
+            Action = new ObjCRuntime.Selector("segmentedControlAction:"),
         };
-        
-        Window.Center();
-    }
-
-    public override void ViewDidLoad() {
-        base.ViewDidLoad();
         
         _combosTableView = new NSTableView {
             TranslatesAutoresizingMaskIntoConstraints = false,
@@ -61,6 +54,21 @@ public class ButtonCombosViewController: NSViewController, INSTableViewDelegate,
             Width = 200,
         });
         
+        Window = new NSWindow(
+            CGRect.Empty, 
+            NSWindowStyle.Titled | NSWindowStyle.Closable | NSWindowStyle.Miniaturizable | NSWindowStyle.Resizable, 
+            NSBackingStore.Buffered, 
+            true) {
+            Title = $"Configure button combos",
+            ContentViewController = this,
+        };
+        
+        Window.Center();
+    }
+
+    public override void ViewDidLoad() {
+        base.ViewDidLoad();
+        
         var scrollView = new NSScrollView {
             TranslatesAutoresizingMaskIntoConstraints = false,
         };
@@ -69,15 +77,6 @@ public class ButtonCombosViewController: NSViewController, INSTableViewDelegate,
         scrollView.BorderType = NSBorderType.BezelBorder;
         
         View.AddSubview(scrollView);
-        
-        // Add a segmented control to the bottom of the table view for + and - buttons
-        _segmentedControl = new NSSegmentedControl {
-            TranslatesAutoresizingMaskIntoConstraints = false,
-            SegmentStyle = NSSegmentStyle.SmallSquare,
-            TrackingMode = NSSegmentSwitchTracking.Momentary,
-            SegmentCount = 3,
-            Action = new ObjCRuntime.Selector("segmentedControlAction:"),
-        };
         
         _segmentedControl.SetImage(NSImage.ImageNamed(NSImageName.AddTemplate), 0);
         _segmentedControl.SetImage(NSImage.ImageNamed(NSImageName.RemoveTemplate), 1);
@@ -108,7 +107,9 @@ public class ButtonCombosViewController: NSViewController, INSTableViewDelegate,
     
     [Export("segmentedControlAction:")]
     public void SegmentedControlAction(NSObject sender) {
-        var segmentedControl = sender as NSSegmentedControl;
+        if (sender is not NSSegmentedControl segmentedControl) {
+            return;
+        }
         
         if (segmentedControl.SelectedSegment == 0) {
             _combosTableView.InsertRows(NSIndexSet.FromIndex(_combosTableView.RowCount), NSTableViewAnimation.SlideDown);
@@ -165,10 +166,6 @@ public class ButtonCombosViewController: NSViewController, INSTableViewDelegate,
     }
     
     public nint GetRowCount(NSTableView tableView) {
-        if (_segmentedControl == null) {
-            return 0;
-        }
-        
         if (_inputs.ButtonCombos().Count > 0) {
             _segmentedControl.SetEnabled(true, 0);
         }
@@ -244,7 +241,7 @@ public class ButtonCombosViewController: NSViewController, INSTableViewDelegate,
     }
     
     public void OnInput(Inputs.InputState inputs) {
-        if (_selectComboLabel == null) {
+        if (_selectComboLabel == null || _selectedButton == null) {
             return;
         }
 

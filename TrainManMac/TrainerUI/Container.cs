@@ -3,8 +3,8 @@ using TrainManCore.Scripting.UI;
 
 namespace TrainMan.TrainerUI;
 
-public abstract class Container: NSStackView, IContainer {
-    public IWindow Window { get; set; }
+public abstract class Container(IWindow window) : NSStackView, IContainer {
+    public IWindow Window { get; set; } = window;
     public abstract void ConstrainElement(NSView element);
     
     public ILabel AddLabel(string text) {
