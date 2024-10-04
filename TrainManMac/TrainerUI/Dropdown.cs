@@ -1,4 +1,5 @@
 using NLua;
+using NLua.Exceptions;
 using TrainManCore.Scripting.UI;
 
 namespace TrainMan.TrainerUI;
@@ -23,8 +24,16 @@ public class Dropdown: NSPopUpButton, IDropdown {
         
         Target = this;
         Action = new ObjCRuntime.Selector("dropdownDidChange:");
-        
-        _callback.Call(1, _items.Values.First());
+
+        try {
+            _callback.Call(1, _items.Values.First());
+        } catch (LuaScriptException exception) {
+            new NSAlert {
+                AlertStyle = NSAlertStyle.Critical,
+                InformativeText = exception.Message,
+                MessageText = "Error",
+            }.RunSheetModal(((TrainerViewController)Window).Window);
+        }
     }
 
     public Dictionary<int, string> GetItemsFromLuaTable(LuaTable options) {
@@ -65,8 +74,16 @@ public class Dropdown: NSPopUpButton, IDropdown {
         }
         
         SetTitle(_items[index]);
-        
-        _callback.Call(index, _items[index]);
+
+        try {
+            _callback.Call(index, _items[index]);
+        } catch (LuaScriptException exception) {
+            new NSAlert {
+                AlertStyle = NSAlertStyle.Critical,
+                InformativeText = exception.Message,
+                MessageText = "Error",
+            }.RunSheetModal(((TrainerViewController)Window).Window);
+        }
     }
     
     [Export("dropdownDidChange:")]
@@ -74,8 +91,16 @@ public class Dropdown: NSPopUpButton, IDropdown {
         var keys = _items.Keys.ToArray();
         var values = _items.Values.ToArray();
 
-        _callback.Call(keys[IndexOfSelectedItem-1], values[IndexOfSelectedItem-1]);
-        
+        try {
+            _callback.Call(keys[IndexOfSelectedItem - 1], values[IndexOfSelectedItem - 1]);
+        } catch (LuaScriptException exception) {
+            new NSAlert {
+                AlertStyle = NSAlertStyle.Critical,
+                InformativeText = exception.Message,
+                MessageText = "Error",
+            }.RunSheetModal(((TrainerViewController)Window).Window);
+        }
+
         SetTitle(values[IndexOfSelectedItem-1]);
     }
 }

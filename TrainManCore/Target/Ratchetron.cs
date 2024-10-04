@@ -2,13 +2,13 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using TrainManCore.Exceptions;
 
 namespace TrainManCore.Target;
 
 public class Ratchetron(string ip) : Target(ip) {
-    string Ip { get; set; } = ip;
-
-    private readonly int _port = 9671;
+    private readonly string _ip = ip;
+    private const int Port = 9671;
 
     private int _pid = 0;
 
@@ -32,65 +32,73 @@ public class Ratchetron(string ip) : Target(ip) {
     }
 
     public override bool Start(AttachedCallback callback) {
-        try {
-            this._client = new TcpClient(this.Ip, this._port);
-            this._client.NoDelay = true;
+        var connectionThread = new Thread(() => { 
+            try {
+                _client = new TcpClient();
 
-            this._stream = _client.GetStream();
+                if (!_client.ConnectAsync(_ip, Port).Wait(5000)) {
+                    RunOnMainThread?.Invoke(() => {
+                        callback(false, "Timed out connecting to PS3");
+                    });
 
-            byte[] connMsg = new byte[6];
-            _ = _stream.Read(connMsg, 0, 6);
-
-            uint apiRev = BitConverter.ToUInt32(connMsg.Skip(2).Take(4).Reverse().ToArray(), 0);
-
-            if (apiRev < 2) {
-                callback(false, "The Ratchetron module loaded on your PS3 is too old, you need to restart your PS3 to load the new version.");
+                    return;
+                }
                 
-                return false;
+                _client.NoDelay = true;
+
+                _stream = _client.GetStream();
+
+                byte[] connMsg = new byte[6];
+                _ = _stream.Read(connMsg, 0, 6);
+
+                uint apiRev = BitConverter.ToUInt32(connMsg.Skip(2).Take(4).Reverse().ToArray(), 0);
+
+                if (apiRev < 2) {
+                    callback(false, "The Ratchetron module loaded on your PS3 is too old, you need to restart your PS3 to load the new version.");
+                }
+
+                if (connMsg[0] == 0x01) {
+                    _remoteEndpoint = new IPEndPoint(IPAddress.Parse(this._ip), 0);
+                    _connected = true;
+                    _pid = GetCurrentPID();
+                    
+                    RunOnMainThread?.Invoke(() => {
+                        callback(true, null);
+                    });
+                }
+            } catch (SocketException) {
+                RunOnMainThread?.Invoke(() => {
+                    callback(false, "Socket error: Failed to connect to PS3");
+                });
+            } catch (Exception) {
+                RunOnMainThread?.Invoke(() => {
+                    callback(false, "Unknown error: Failed to connect to PS3");
+                });
             }
+            
+            RunOnMainThread?.Invoke(() => {
+                callback(false, "Mega unknown error: Failed to connect to PS3");
+            });
+        });
 
-            if (connMsg[0] == 0x01) {
-                this._remoteEndpoint = new IPEndPoint(IPAddress.Parse(this.Ip), 0);
-
-                this._connected = true;
-
-#if DEBUG
-                this.EnableDebugMessages();
-#endif
-
-                _pid = GetCurrentPID();
-                
-                callback(true, null);
-                
-                return true;
-            }
-        }
-        catch (SocketException) {
-            callback(false, "Socket error: Failed to connect to PS3");
-            return false;
-        } catch (Exception) {
-            callback(false, "Unknown error: Failed to connect to PS3");
-            return false;
-        }
+        connectionThread.Start();
         
-        callback(false, "Mega unknown error: Failed to connect to PS3");
-
         return false;
     }
 
     public override bool Stop() {
         base.Stop();
         
-        this._connected = false;
-        this._udpClient?.Close();
-        this._client?.Close();
+        _connected = false;
+        _udpClient?.Close();
+        _client?.Close();
 
         return true;
     }
 
     public override string GetGameTitleID() {
         if (!_connected) {
-            throw new Exception("I ain't connected");
+            throw new TargetException("Not connected to PS3");
         }
 
         byte[] cmd = { 0x06 };
@@ -100,17 +108,17 @@ public class Ratchetron(string ip) : Target(ip) {
         byte[] titleIdBuf = new byte[16];
         _ = _stream?.Read(titleIdBuf, 0, 16);
 
-        return System.Text.Encoding.Default.GetString(titleIdBuf).Replace("\0", string.Empty);
+        return Encoding.Default.GetString(titleIdBuf).Replace("\0", string.Empty);
     }
 
     public int[] GetPIDList() {
         if (!_connected) {
-            throw new Exception("I ain't connected");
+            throw new TargetException("Not connected to PS3");
         }
         
         Debug.Assert(_stream != null, nameof(_stream) + " != null");
 
-        byte[] cmd = { 0x03 };
+        byte[] cmd = [0x03];
 
         WriteStream(cmd, 0, 1);
 
@@ -137,7 +145,7 @@ public class Ratchetron(string ip) : Target(ip) {
     }
 
     public void EnableDebugMessages() {
-        byte[] cmd = { 0x0d };
+        byte[] cmd = [0x0d];
 
         WriteStream(cmd, 0, 1);
     }
@@ -160,8 +168,8 @@ public class Ratchetron(string ip) : Target(ip) {
     }
 
     public override void WriteMemory(uint address, uint size, byte[] memory) {
-        var cmdBuf = new List<byte>();
-        cmdBuf.Add(0x05);
+        var cmdBuf = new List<byte> { 0x05 };
+        
         cmdBuf.AddRange(BitConverter.GetBytes((UInt32)_pid).Reverse());
         cmdBuf.AddRange(BitConverter.GetBytes((UInt32)address).Reverse());
         cmdBuf.AddRange(BitConverter.GetBytes((UInt32)size).Reverse());
@@ -173,22 +181,22 @@ public class Ratchetron(string ip) : Target(ip) {
 
     public override byte[] ReadMemory(uint address, uint size) {
         if (_stream == null) {
-            throw new Exception("I ain't connected");
+            throw new TargetException("Not connected to PS3");
         }
         
-        var cmdBuf = new List<byte>();
-        cmdBuf.Add(0x04);
+        var cmdBuf = new List<byte> { 0x04 };
+        
         cmdBuf.AddRange(BitConverter.GetBytes((UInt32)_pid).Reverse());
         cmdBuf.AddRange(BitConverter.GetBytes((UInt32)address).Reverse());
         cmdBuf.AddRange(BitConverter.GetBytes((UInt32)size).Reverse());
 
 #if DEBUG
-        var watch = new System.Diagnostics.Stopwatch();
+        var watch = new Stopwatch();
 
         watch.Start();
 #endif
 
-        this.WriteStream(cmdBuf.ToArray(), 0, cmdBuf.Count);
+        WriteStream(cmdBuf.ToArray(), 0, cmdBuf.Count);
 
         byte[] memory = new byte[size];
 
@@ -210,12 +218,12 @@ public class Ratchetron(string ip) : Target(ip) {
     }
 
     public override void Notify(string message) {
-        var cmdBuf = new List<byte>();
-        cmdBuf.Add(0x02);
+        var cmdBuf = new List<byte> { 0x02 };
+        
         cmdBuf.AddRange(BitConverter.GetBytes((UInt32)message.Length).Reverse());
         cmdBuf.AddRange(Encoding.ASCII.GetBytes(message));
 
-        this.WriteStream(cmdBuf.ToArray(), 0, cmdBuf.Count);
+        WriteStream(cmdBuf.ToArray(), 0, cmdBuf.Count);
     }
 
     private void DataChannelReceive() {
@@ -225,9 +233,9 @@ public class Ratchetron(string ip) : Target(ip) {
         
         IPEndPoint end = new IPEndPoint(IPAddress.Any, 0);
 
-        while (this._connected) {
+        while (_connected) {
             try {
-                byte[] cmdBuf = this._udpClient.Receive(ref end);
+                byte[] cmdBuf = _udpClient.Receive(ref end);
                 byte command = cmdBuf.Take(1).ToArray()[0];
 
                 switch (command) {
@@ -237,10 +245,10 @@ public class Ratchetron(string ip) : Target(ip) {
                         uint tickUpdated = BitConverter.ToUInt32(cmdBuf.Skip(9).Take(4).Reverse().ToArray(), 0);
                         var value = cmdBuf.Skip(13).Take((int)size).Reverse().ToArray();
 
-                        if (this._memSubTickUpdates.ContainsKey((int)memSubID) &&
-                            this._memSubTickUpdates[(int)memSubID] != tickUpdated) {
-                            this._memSubTickUpdates[(int)memSubID] = tickUpdated;
-                            this._memSubCallbacks[(int)memSubID](value);
+                        if (_memSubTickUpdates.ContainsKey((int)memSubID) &&
+                            _memSubTickUpdates[(int)memSubID] != tickUpdated) {
+                            _memSubTickUpdates[(int)memSubID] = tickUpdated;
+                            _memSubCallbacks[(int)memSubID](value);
                         }
 
                         break;
@@ -248,19 +256,18 @@ public class Ratchetron(string ip) : Target(ip) {
                 }
             }
             catch (SocketException) {
-                // Who gives a shit
+                // TODO: Handle this
             }
         }
     }
 
     public void OpenDataChannel() {
-        byte[] data = new byte[1024];
-        int port = 4000;
-        bool udpStarted = false;
+        var port = 4000;
+        var udpStarted = false;
         while (!udpStarted) {
             try {
                 IPEndPoint ipep = new IPEndPoint(IPAddress.Any, port);
-                this._udpClient = new UdpClient(ipep);
+                _udpClient = new UdpClient(ipep);
                 udpStarted = true;
             }
             catch (SocketException) {
@@ -275,15 +282,14 @@ public class Ratchetron(string ip) : Target(ip) {
         if (_udpClient != null && _udpClient.Client.LocalEndPoint != null) {
             var assignedPort = ((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;
 
-            var cmdBuf = new List<byte>();
-            cmdBuf.Add(0x09);
+            var cmdBuf = new List<byte> { 0x09 };
             cmdBuf.AddRange(BitConverter.GetBytes((UInt32)assignedPort).Reverse());
 
-            this.WriteStream(cmdBuf.ToArray(), 0, cmdBuf.Count);
+            WriteStream(cmdBuf.ToArray(), 0, cmdBuf.Count);
 
-            byte[] returnValue = new byte[1];
+            var returnValue = new byte[1];
 
-            int nBytes = 0;
+            var nBytes = 0;
             while (nBytes < 1) {
                 if (_stream != null) nBytes += _stream.Read(returnValue, 0, 1);
             }
@@ -293,7 +299,7 @@ public class Ratchetron(string ip) : Target(ip) {
 
                 //this.udpClient.Send(new byte[] { 0x01 }, 1, remoteEndpoint);
 
-                Thread dataThread = new Thread(this.DataChannelReceive);
+                var dataThread = new Thread(this.DataChannelReceive);
                 dataThread.Start();
             }
             else if (returnValue[0] == 2) {
@@ -310,7 +316,7 @@ public class Ratchetron(string ip) : Target(ip) {
     public override int SubMemory(uint address, uint size, MemoryCondition condition, byte[] memory,
         Action<byte[]> callback) {
         if (_stream == null) {
-            throw new Exception("I ain't connected");
+            throw new TargetException("Not connected to PS3");
         }
         
         var cmdBuf = new List<byte>();
@@ -332,21 +338,20 @@ public class Ratchetron(string ip) : Target(ip) {
 
         var memSubID = (int)BitConverter.ToInt32(memSubIDBuf.Take(4).Reverse().ToArray(), 0);
 
-        this._memSubCallbacks[memSubID] = callback;
-        this._memSubTickUpdates[memSubID] = 0;
+        _memSubCallbacks[memSubID] = callback;
+        _memSubTickUpdates[memSubID] = 0;
 
-        Console.WriteLine($"Subscribed to address {address.ToString("X")} with subscription ID {memSubID}");
+        Console.WriteLine($"Subscribed to address {address:X} with subscription ID {memSubID}");
 
         return memSubID;
     }
 
     public override int FreezeMemory(uint address, uint size, MemoryCondition condition, byte[] memory) {
         if (_stream == null) {
-            throw new Exception("I ain't connected");
+            throw new TargetException("Not connected to PS3");
         }
         
-        var cmdBuf = new List<byte>();
-        cmdBuf.Add(0x0b);
+        var cmdBuf = new List<byte> { 0x0b };
         cmdBuf.AddRange(BitConverter.GetBytes((UInt32)_pid).Reverse());
         cmdBuf.AddRange(BitConverter.GetBytes((UInt32)address).Reverse());
         cmdBuf.AddRange(BitConverter.GetBytes((UInt32)size).Reverse());
@@ -376,11 +381,10 @@ public class Ratchetron(string ip) : Target(ip) {
             return;
         }
         
-        var cmdBuf = new List<byte>();
-        cmdBuf.Add(0x0c);
+        var cmdBuf = new List<byte> { 0x0c };
         cmdBuf.AddRange(BitConverter.GetBytes((UInt32)memSubID).Reverse());
 
-        this.WriteStream(cmdBuf.ToArray(), 0, cmdBuf.Count);
+        WriteStream(cmdBuf.ToArray(), 0, cmdBuf.Count);
 
         byte[] resultBuf = new byte[1];
 
@@ -389,9 +393,9 @@ public class Ratchetron(string ip) : Target(ip) {
             nBytes += _stream.Read(resultBuf, 0, 1);
         }
 
-        this._memSubCallbacks.Remove(memSubID);
-        this._memSubTickUpdates.Remove(memSubID);
-        this._frozenAddresses.Remove(memSubID);
+        _memSubCallbacks.Remove(memSubID);
+        _memSubTickUpdates.Remove(memSubID);
+        _frozenAddresses.Remove(memSubID);
 
         Console.WriteLine($"Released memory subscription ID {memSubID}");
 

@@ -6,7 +6,7 @@ using TrainManCore.Scripting.UI;
 namespace TrainMan;
 
 public class TrainerModule: ITrainer {
-    List<IWindow> _windows = [];
+    public List<IWindow> Windows { get; set; } = [];
     private IWindow? _mainWindow;
     
     private List<IMenu> _menus = [];
@@ -39,8 +39,8 @@ public class TrainerModule: ITrainer {
             appDelegate.AttachViewController.Window.MakeKeyAndOrderFront(null);
         });
     }
-    
-    public IWindow CreateWindow(Module module, string className, bool isMainWindow = false) {
+
+    public IWindow CreateWindow(Module module, LuaTable luaObject, bool isMainWindow = false) {
         if (_mainWindow == null && !isMainWindow) {
             throw new Exception("Main window must be created first.");
         }
@@ -49,13 +49,13 @@ public class TrainerModule: ITrainer {
             throw new Exception("Main window already created.");
         }
         
-        var window = new TrainerViewController(isMainWindow, className, module);
+        var window = new TrainerViewController(isMainWindow, luaObject, module);
         
         if (isMainWindow) {
             _mainWindow = window;
         }
         
-        _windows.Add(window);
+        Windows.Add(window);
 
         return window;
     }
@@ -67,9 +67,11 @@ public class TrainerModule: ITrainer {
             // If the menu already exists, add a separator and return the existing menu
             if (menu.Title == title) {
                 menu.AddSeparator();
-                
-                callback?.Invoke(menu);
-                
+
+                if (callback != null) {
+                    TryInvoke(_mainWindow, callback, menu);
+                }
+
                 return menu;
             }
         }
@@ -78,7 +80,7 @@ public class TrainerModule: ITrainer {
         MainMenu.InsertItem(newMenu, _menus.Count);
 
         if (callback != null) {
-            callback(newMenu);
+            TryInvoke(_mainWindow, callback, newMenu);
         }
 
         return newMenu;
@@ -91,7 +93,7 @@ public class TrainerModule: ITrainer {
     }
     
     public void CloseAllWindows() {
-        foreach (var window in _windows) {
+        foreach (var window in Windows) {
             window.Close();
         }
     }
@@ -103,5 +105,59 @@ public class TrainerModule: ITrainer {
         };
         
         alert.RunModal();
+    }
+
+    public static void TryInvoke(IWindow? window, LuaFunction action, params object[] args) {
+        try {
+            action.Call(args);
+        } catch (Exception e) {
+            var alert = new NSAlert {
+                AlertStyle = NSAlertStyle.Critical,
+                InformativeText = e.Message,
+                MessageText = "An error occurred"
+            };
+            
+            if (window is TrainerViewController trainerViewController) {
+                alert.RunSheetModal(trainerViewController.Window);
+            } else {
+                alert.RunModal();
+            }
+        }
+    }
+
+    public static void TryInvoke(IWindow? window, Action action, params object[] args) {
+        try {
+            action();
+        } catch (Exception e) {
+            var alert = new NSAlert {
+                AlertStyle = NSAlertStyle.Critical,
+                InformativeText = e.Message,
+                MessageText = "An error occurred"
+            };
+            
+            if (window is TrainerViewController trainerViewController) {
+                alert.RunSheetModal(trainerViewController.Window);
+            } else {
+                alert.RunModal();
+            }
+        }
+    }
+
+    public static void TryInvoke<T>(IWindow? window, Action<T> action, params object[] args) {
+        try {
+            action((T)args[0]);
+        } catch (Exception e) {
+            var alert = new NSAlert {
+                AlertStyle = NSAlertStyle.Critical,
+                InformativeText = e.Message,
+                MessageText = "An error occurred"
+            };
+            
+            if (window is TrainerViewController trainerViewController) {
+                alert.RunSheetModal(trainerViewController.Window);
+            } else {
+                alert.RunModal();
+            }
+        }
     }
 }

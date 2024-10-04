@@ -28,7 +28,7 @@ public abstract class Container(IWindow window) : NSStackView, IContainer {
     public IButton AddButton(string title, LuaFunction callback) {
         var button = new Button(Window, title, callback);
         AddArrangedSubview(button);
-        
+
         ConstrainElement(button);
         
         ((TrainerViewController)Window).RegisterButton(button);
@@ -60,7 +60,7 @@ public abstract class Container(IWindow window) : NSStackView, IContainer {
         
         ConstrainElement(row);
         
-        callback.Call(row);
+        TrainerModule.TryInvoke(window, callback, row);
         
         return row;
     }
@@ -75,7 +75,7 @@ public abstract class Container(IWindow window) : NSStackView, IContainer {
         AddConstraints(NSLayoutConstraint.FromVisualFormat("V:|-10-[column]-10-|", NSLayoutFormatOptions.None, 
             null, new NSDictionary("column", column)));
         
-        callback.Call(column);
+        TrainerModule.TryInvoke(window, callback, column);
         
         return column;
     }

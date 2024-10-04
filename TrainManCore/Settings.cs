@@ -42,16 +42,7 @@ public class Settings {
         _configFilePath = configFilePath;
         _settingsTable = Toml.ReadFile(configFilePath);
     }
-
-    /// <summary>
-    /// Gets the default instance of the <see cref="Settings"/> class.
-    /// </summary>
-    /// <param name="configFilePath">The path to the TOML settings file. Default value is "settings.toml".</param>
-    /// <returns>The default instance of the <see cref="Settings"/> class.</returns>
-    // public static Settings Default(string configFilePath = "settings.user.toml") {
-    //     return _default ??= new Settings(configFilePath, true);
-    // }
-
+    
     /// <summary>
     /// Gets the value for the specified key from the settings. If the setting is not found and there is a fallback
     /// provided, the fallback will be written to the settings key in the configuration file. 
@@ -115,12 +106,6 @@ public class Settings {
                 next = current.CreateEmptyAttachedTable();
 
                 current.Add(keys[i], next);
-
-                // if (i >= key.Length - 1) {
-                //     current.Add(keys[i], next, TomlTable.TableTypes.Inline);
-                // } else {
-                //     
-                // }
             }
 
             if (!(next is TomlTable)) {
@@ -178,12 +163,10 @@ public class Settings {
                 current.Add(keys[keys.Length - 1], current.CreateAttached(conv));
                 break;
             case List<Dictionary<string, object>> conv:
-                // var array = current.CreateAttached(new List<TomlTable>(), TomlTable.TableTypes.Inline);
                 var array = current.CreateEmptyAttachedTableArray();
                 
                 foreach (var dict in conv) {
                     var expando = new ExpandoObject();
-                    
                     var expandoDict = expando as IDictionary<string, object>;
 
                     foreach (var kvp in dict) {

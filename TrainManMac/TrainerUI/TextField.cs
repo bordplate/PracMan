@@ -1,4 +1,5 @@
 using NLua;
+using NLua.Exceptions;
 using TrainManCore.Scripting.UI;
 
 namespace TrainMan.TrainerUI;
@@ -23,6 +24,14 @@ public class TextField: NSTextField, ITextField {
     
     [Export("textFieldDidChange:")]
     public void TextFieldDidChange(NSObject sender) {
-        _callback.Call(this.StringValue);
+        try {
+            _callback.Call(this.StringValue);
+        } catch (LuaScriptException exception) {
+            new NSAlert {
+                AlertStyle = NSAlertStyle.Critical,
+                InformativeText = exception.Message,
+                MessageText = "Error",
+            }.RunSheetModal(((TrainerViewController)Window).Window);
+        }
     }
 }

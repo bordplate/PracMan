@@ -1,4 +1,5 @@
 using NLua;
+using NLua.Exceptions;
 using TrainManCore.Scripting.UI;
 
 namespace TrainMan.TrainerUI;
@@ -20,6 +21,14 @@ public class Button: NSButton, IButton {
     
     [Export("buttonClicked:")]
     public void ButtonClicked(NSObject sender) {
-        ((IButton)this).Activate();
+        try {
+            ((IButton)this).Activate();
+        } catch (LuaScriptException exception) {
+            new NSAlert {
+                AlertStyle = NSAlertStyle.Critical,
+                InformativeText = exception.Message,
+                MessageText = "Error",
+            }.RunSheetModal(((TrainerViewController)Window).Window);
+        }
     }
 }

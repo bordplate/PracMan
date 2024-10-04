@@ -1,8 +1,7 @@
 BaseWindow = class("BaseWindow")
 
 function BaseWindow:initialize(isMainWindow)
-    self.native_window = Module:CreateWindow(self.class.name, isMainWindow)
-    self.native_window:SetLuaContext(self)
+    Module:CreateWindow(self, isMainWindow)
 end
 
 function BaseWindow:SetTitle(title)

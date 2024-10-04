@@ -1,4 +1,5 @@
 using NLua;
+using NLua.Exceptions;
 using TrainManCore.Scripting.UI;
 
 namespace TrainMan.TrainerUI;
@@ -23,7 +24,15 @@ public class Checkbox: NSButton, ICheckbox {
 
     [Export("checkboxClicked:")]
     public void CheckboxClicked(NSObject sender) {
-        _callback.Call(IsChecked());
+        try {
+            _callback.Call(IsChecked());
+        } catch (LuaScriptException exception) {
+            new NSAlert {
+                AlertStyle = NSAlertStyle.Critical,
+                InformativeText = exception.Message,
+                MessageText = "Error",
+            }.RunSheetModal(((TrainerViewController)Window).Window);
+        }
     }
 
     public void SetChecked(bool isChecked) {

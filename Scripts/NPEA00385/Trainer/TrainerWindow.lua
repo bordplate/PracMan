@@ -4,11 +4,8 @@ require 'UnlocksWindow'
 TrainerWindow = class("TrainerWindow", BaseWindow)
 
 function TrainerWindow:initialize()
-    self.game = Game()
-    
     BaseWindow.initialize(self, true)
-    
-    self:Show()
+    self.game = Game()
     
     self.unlocksWindow = nil
 end

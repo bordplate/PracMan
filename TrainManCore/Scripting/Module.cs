@@ -1,6 +1,8 @@
 using System.Globalization;
 using Nett;
 using NLua;
+using NLua.Exceptions;
+using TrainManCore.Scripting.Exceptions;
 using TrainManCore.Scripting.UI;
 using TrainManCore.Target;
 
@@ -28,14 +30,17 @@ public class Module(string title, string path, Target.Target target) {
             var entryFile = File.ReadAllText(Path.Combine(ModulePath, entry));
         
             if (entryFile == null) {
-                throw new Exception("Entry point file not found.");
+                throw new ScriptException("Entry point file not found.");
             }
 
             SetupState(_state);
-        
-            _state.DoString(entryFile, entry);
 
-            (_state["OnLoad"] as LuaFunction)?.Call();
+            try {
+                _state.DoString(entryFile, entry);
+                (_state["OnLoad"] as LuaFunction)?.Call();
+            } catch (LuaScriptException exception) {
+                throw new ScriptException(exception.Message);
+            }
         }
 
         var patches = Settings.GetTableForSection("Patches");
@@ -79,21 +84,22 @@ public class Module(string title, string path, Target.Target target) {
         OnExit?.Invoke();
     }
 
-    public void SetupState(Lua state) {
+    private void SetupState(Lua state) {
+        state.UseTraceback = true;
         state.LoadCLRPackage();
         
         if (TrainerDelegate == null) {
-            throw new Exception("TrainerDelegate not set.");
+            throw new ScriptException("TrainerDelegate not set.");
         }
         
         // Set package path to the runtime folder and the module's folder
-        state.DoString($"package.path = package.path .. ';{ModulesRoot()}/Runtime/?.lua;{ModulePath}/?.lua'", "set package path");
-
-        state["bytestoint"] = ByteArrayToInt;
-        state["bytestouint"] = ByteArrayToUInt;
-        state["bytestofloat"] = ByteArrayToFloat;
+        state.DoString($"package.path = package.path .. ';{GetModulesRoot()}/Runtime/?.lua;{ModulePath}/?.lua'", "set package path");
         
-        state.DoString(File.ReadAllText(Path.Combine(ModulesRoot(), "Runtime/runtime.lua")), "runtime.lua");
+        foreach (var (key, value) in LuaFunctions.Functions) {
+            state[key] = value;
+        }
+        
+        state.DoString(File.ReadAllText(Path.Combine(GetModulesRoot(), "Runtime/runtime.lua")), "runtime.lua");
         
         state["Module"] = this;
         state["print"] = (string text) => {
@@ -119,18 +125,21 @@ public class Module(string title, string path, Target.Target target) {
         state["Target"] = _target;
     }
 
-    public IWindow CreateWindow(string className, bool isMainWindow = false) {
-        var window = TrainerDelegate!.CreateWindow(this, className, isMainWindow);
+    public IWindow CreateWindow(LuaTable luaObject, bool isMainWindow = false) {
+        if (luaObject["class"] is not LuaTable luaClass) {
+            throw new ScriptException("No class found in object passed to `CreateWindow`.");
+        }
         
-        window.OnWindowLoaded += WindowOnOnWindowLoaded;
+        if (luaClass["name"] is not string) {
+            throw new ScriptException($"`name` not found in class passed to `CreateWindow`.");
+        }
+
+        var window = TrainerDelegate!.CreateWindow(this, luaObject, isMainWindow);
+        window.OnLoad += (window) => {
+            _inputs?.BindButtonCombos(window);
+        };
         
         return window;
-        
-        void WindowOnOnWindowLoaded() {
-            _inputs?.BindButtonCombos(window);
-            
-            window.OnWindowLoaded -= WindowOnOnWindowLoaded;
-        }
     }
     
     public Inputs? LoadInputs() {
@@ -148,14 +157,14 @@ public class Module(string title, string path, Target.Target target) {
         
         SetupState(state);
         
-        string entryFile = File.ReadAllText(Path.Combine(ModulePath, inputsControllerPath));
+        var entryFile = File.ReadAllText(Path.Combine(ModulePath, inputsControllerPath));
         
         state.DoString(entryFile, inputsControllerPath);
 
         _inputs = new Inputs(state, this);
         
         if (state["Settings"] is not Settings userSettings) {
-            throw new Exception("No Settings in the Module's state.");
+            throw new ScriptException("No Settings in the Module's state.");
         }
 
         if (!userSettings.Get("Inputs.has_default_combos", false)) {
@@ -164,11 +173,17 @@ public class Module(string title, string path, Target.Target target) {
             userSettings.Set("Inputs.combos", defaultCombos);
             userSettings.Set("Inputs.has_default_combos", true);
         }
+
+        if (TrainerDelegate?.Windows is { } windows) {
+            foreach (var window in windows) {
+                _inputs.BindButtonCombos(window);
+            }
+        }
         
         return _inputs;
     }
     
-    public static string ModulesRoot() {
+    public static string GetModulesRoot() {
         var rootDir = Environment.GetEnvironmentVariable("TRAINMAN_ROOT");
         
         if (rootDir == null) {
@@ -178,18 +193,18 @@ public class Module(string title, string path, Target.Target target) {
         return Path.Combine(rootDir, "Scripts");
     }
     
-    public static List<Module> ModulesForTitle(string title, Target.Target target) {
-        if (title == null || title == "") {
+    public static List<Module> GetModulesForTitle(string title, Target.Target target) {
+        if (title == "") {
             return [];
         }
         
-        string scriptsDir = Path.Combine(ModulesRoot(), title);
+        var scriptsDir = Path.Combine(GetModulesRoot(), title);
         
         if (Directory.Exists(scriptsDir)) {
-            string[] dirs = Directory.GetDirectories(scriptsDir);
+            var dirs = Directory.GetDirectories(scriptsDir);
             List<Module> modules = [];
             
-            foreach (string dir in dirs) {
+            foreach (var dir in dirs) {
                 modules.Add(new Module(title, dir, target));
             }
         
@@ -197,17 +212,5 @@ public class Module(string title, string path, Target.Target target) {
         }
         
         return [];
-    }
-
-    public static int ByteArrayToInt(byte[] bytes, int startIndex = 0) {
-        return BitConverter.ToInt32(bytes, startIndex);
-    }
-    
-    public static uint ByteArrayToUInt(byte[] bytes, int startIndex = 0) {
-        return BitConverter.ToUInt32(bytes, startIndex);
-    }
-    
-    public static float ByteArrayToFloat(byte[] bytes, int startIndex = 0) {
-        return BitConverter.ToSingle(bytes, startIndex);
     }
 }

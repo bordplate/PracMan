@@ -20,7 +20,7 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
     public ModLoaderViewController(Target target) : base() {
         _target = target;
 
-        _mods = Module.ModulesForTitle(target.GetGameTitleID(), target);
+        _mods = Module.GetModulesForTitle(target.GetGameTitleID(), target);
         
         _modsTableView = new NSTableView {
             TranslatesAutoresizingMaskIntoConstraints = false,
@@ -349,7 +349,7 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
             _mods[row].Exit();
             
             // Replace the mod instance with a fresh one
-            var allModules = Module.ModulesForTitle(_target.GetGameTitleID(), _target);
+            var allModules = Module.GetModulesForTitle(_target.GetGameTitleID(), _target);
             if (allModules.Find(m => m.ModulePath == _mods[row].ModulePath) is {} newInstance) {
                 _mods[row] = newInstance;
             }

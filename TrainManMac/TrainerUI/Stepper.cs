@@ -101,6 +101,5 @@ public class NumberFormatter : NSNumberFormatter {
         _lastValidString = newString;
     
         return true;
-        
     }
 }

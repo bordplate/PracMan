@@ -1,3 +1,7 @@
+using System.Net.Sockets;
+using TrainManCore.Exceptions;
+using TrainManCore.Target.API;
+
 namespace TrainManCore.Target;
 
 using System;
@@ -59,9 +63,11 @@ public class RPCS3(string slot) : Target(slot) {
             _pine = new PINE(slot);
             callback(true, null);
             return true;
-        }
-        catch (Exception ex) {
-            callback(false, "Connection failed: " + ex.Message);
+        } catch (SocketException ex) {
+            callback(false, $"Couldn't open IPC port {slot}. Did you enable IPC in RPCS3 (Configuration -> IPC)? Make sure the port is correct and not already in use.");
+            return false;
+        } catch (Exception ex) {
+            callback(false, "Unknown error: " + ex.Message);
             return false;
         }
     }
@@ -97,7 +103,7 @@ public class RPCS3(string slot) : Target(slot) {
 
     public override string GetGameTitleID() {
         if (_pine == null) {
-            return "";
+            throw new TargetException("Can't get title: Not connected");
         }
         
         try {
@@ -105,7 +111,7 @@ public class RPCS3(string slot) : Target(slot) {
             return string.IsNullOrEmpty(gameId) ? "" : gameId;
         }
         catch {
-            return "";
+            throw new TargetException("Can't get title: PINE error");
         }
     }
 
@@ -113,13 +119,11 @@ public class RPCS3(string slot) : Target(slot) {
         throw new NotImplementedException();
     }
 
-    public override void Notify(string message) {
-        //MessageBox.Show(message);
-    }
+    public override void Notify(string message) { }
 
     public override byte[] ReadMemory(uint address, uint size) {
         if (_pine == null) {
-            throw new Exception("Not connected");
+            throw new TargetException("Can't read memory: Not connected");
         }
         
         try {
@@ -134,7 +138,7 @@ public class RPCS3(string slot) : Target(slot) {
 
     public override void WriteMemory(uint address, uint size, byte[] memory) {
         if (_pine == null) {
-            throw new Exception("Not connected");
+            throw new TargetException("Can't write memory: Not connected");
         }
         
         try {

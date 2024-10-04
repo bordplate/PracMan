@@ -1,4 +1,5 @@
 using NLua;
+using NLua.Exceptions;
 using TrainManCore.Scripting.UI;
 
 namespace TrainMan.TrainerUI;
@@ -43,11 +44,27 @@ public class MenuItem: NSMenuItem, IMenuItem {
         if (IsCheckable) {
             State = State == NSCellStateValue.On ? NSCellStateValue.Off : NSCellStateValue.On;
 
-            _checkCallback?.Invoke(State == NSCellStateValue.On);
+            try {
+                _checkCallback?.Invoke(State == NSCellStateValue.On);
+            } catch (LuaScriptException exception) {
+                new NSAlert {
+                    AlertStyle = NSAlertStyle.Critical,
+                    InformativeText = exception.Message,
+                    MessageText = "Error",
+                }.RunSheetModal(((TrainerViewController)Window).Window);
+            }
 
             return;
         }
-        
-        _callback?.Invoke();
+
+        try {
+            _callback?.Invoke();
+        } catch (LuaScriptException exception) {
+            new NSAlert {
+                AlertStyle = NSAlertStyle.Critical,
+                InformativeText = exception.Message,
+                MessageText = "Error",
+            }.RunSheetModal(((TrainerViewController)Window).Window);
+        }
     }
 }

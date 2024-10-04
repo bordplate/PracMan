@@ -6,7 +6,7 @@ public interface IButtonListener {
     public void OnButtonPressed(IButton button);
 }
 
-public interface IButton {
+public interface IButton: IControl {
     public IWindow Window { get; }
     public string Title { get; set; }
     public LuaFunction Callback { get; set; }

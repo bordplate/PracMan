@@ -1,13 +1,9 @@
-namespace TrainManCore.Target;
-
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Runtime.InteropServices;
+using System.Text;
+
+namespace TrainManCore.Target.API;
 
 public enum Opcode : byte {
     OP_READ8 = 0,

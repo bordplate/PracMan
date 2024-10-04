@@ -3,14 +3,17 @@ using TrainManCore.Scripting.UI;
 
 namespace TrainMan.TrainerUI;
 
-public class Menu: NSMenuItem, IMenu {
+public class Menu: NSMenuItem, IMenu, INSMenuDelegate {
     public IWindow Window { get; }
+
+    private event Action? onOpen;
     
     public Menu(IWindow? window, string title) {
         Window = window!;
         Title = title;
         
         Submenu = new NSMenu(title);
+        Submenu.Delegate = this;
     }
     
     public void AddSeparator() {
@@ -31,5 +34,14 @@ public class Menu: NSMenuItem, IMenu {
         Submenu!.AddItem(item);
         
         return item;
+    }
+    
+    public void OnOpen(Action callback) {
+        onOpen += callback;
+    }
+    
+    [Export("menuWillOpen:")]
+    public void MenuWillOpen(NSMenu menu) {
+        onOpen?.Invoke();
     }
 }

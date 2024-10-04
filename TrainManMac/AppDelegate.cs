@@ -1,4 +1,5 @@
 using TrainManCore.Scripting;
+using TrainManCore.Scripting.Exceptions;
 using TrainManCore.Target;
 
 namespace TrainMan;
@@ -180,7 +181,7 @@ public class AppDelegate : NSApplicationDelegate {
 
     public List<Module> AllModulesForTarget(Target target) {
         // Get all modules for a target, enabled modules should be replaced with their enabled versions
-        var allModules = Module.ModulesForTitle(target.GetGameTitleID(), target);
+        var allModules = Module.GetModulesForTitle(target.GetGameTitleID(), target);
         var enabledModules = ModulesForTarget(target);
         
         if (enabledModules == null) {
@@ -251,6 +252,10 @@ public class AppDelegate : NSApplicationDelegate {
                             inputs.DisableButtonCombos();
                         }
                     });
+                    
+                    menu.OnOpen(() => {
+                        buttonCombosCheckItem.Checked = inputs.ButtonCombosListening;
+                    });
 
                     buttonCombosCheckItem.Checked = inputs.ButtonCombosListening;
 
@@ -263,8 +268,23 @@ public class AppDelegate : NSApplicationDelegate {
         });
         
         trainerModule.ActivateMenu();
-                        
-        module.Load();
+
+        try {
+            module.Load();
+        }
+        catch (ScriptException exception) {
+            new NSAlert {
+                AlertStyle = NSAlertStyle.Critical,
+                InformativeText = exception.Message,
+                MessageText = "Error loading module",
+            }.RunModal();
+        } catch {
+            new NSAlert {
+                AlertStyle = NSAlertStyle.Critical,
+                InformativeText = "An unknown error occurred while loading the module.",
+                MessageText = "Error loading module",
+            }.RunModal();
+        }
     }
     
     public override void WillTerminate(NSNotification notification)

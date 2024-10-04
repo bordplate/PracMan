@@ -1,4 +1,6 @@
 using NLua;
+using TrainManCore.Exceptions;
+using TrainManCore.Scripting.Exceptions;
 using TrainManCore.Scripting.UI;
 
 namespace TrainManCore.Scripting;
@@ -167,7 +169,7 @@ public class Inputs {
     
     public void BindButtonCombos(IWindow window) {
         if (State["Settings"] is not Settings settings) {
-            throw new Exception("No Settings in the Inputs' state.");
+            throw new InputsException("No Settings in the Inputs' state.");
         }
 
         if (settings.Get("Inputs.combos", new List<Dictionary<string, object>>()) is not { } combos) {
@@ -179,7 +181,7 @@ public class Inputs {
                 combo["button"] is not string buttonTitle || 
                 combo["window"] is not string windowClassName
             ) {
-                throw new Exception("Invalid button combo in settings.");
+                throw new InputsException("Invalid button combo in settings.");
             }
             
             if (window.ClassName != windowClassName) {
@@ -200,7 +202,8 @@ public class Inputs {
             }
             
             if (window.GetButton(buttonTitle) is not { } button) {
-                throw new Exception("Button not found.");
+                // throw new InputsException($"Button {buttonTitle} not found in window '{windowClassName}'.");
+                continue;
             }
             
             _buttonCombos.Add(new ButtonCombo(button, buttons));
@@ -235,7 +238,7 @@ public class Inputs {
 
     public void SaveCombosToSettings() {
         if (State["Settings"] is not Settings settings) {
-            throw new Exception("No Settings in the Inputs' state.");
+            throw new InputsException("No Settings in the Inputs' state.");
         }
 
         var combos = new List<Dictionary<string, object>>();

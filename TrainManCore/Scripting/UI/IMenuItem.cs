@@ -1,6 +1,6 @@
 namespace TrainManCore.Scripting.UI;
 
-public interface IMenuItem {
+public interface IMenuItem: IControl {
     public IWindow Window { get; }
     public string Title { get; set; }
     public bool IsCheckable { get; set; }

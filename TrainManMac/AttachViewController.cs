@@ -146,7 +146,7 @@ public class AttachViewController: NSViewController {
                     appDelegate.RemoveTarget(target);
                 };
 
-                var modules = Module.ModulesForTitle(target.GetGameTitleID(), target);
+                var modules = Module.GetModulesForTitle(target.GetGameTitleID(), target);
 
                 bool atLeastOneModLoaded = false;
 
