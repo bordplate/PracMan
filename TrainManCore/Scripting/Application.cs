@@ -20,11 +20,7 @@ public static class Application {
     }
     
     public static string GetModulesRoot() {
-        var rootDir = Environment.GetEnvironmentVariable("TRAINMAN_ROOT");
-        
-        if (rootDir == null) {
-            rootDir = Directory.GetCurrentDirectory();
-        }
+        var rootDir = Directory.GetCurrentDirectory();
         
         return Path.Combine(rootDir, "Scripts");
     }

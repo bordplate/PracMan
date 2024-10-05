@@ -12,9 +12,7 @@ namespace TrainManCore;
 public class Settings {
     public static Settings Default {
         get {
-            var root = Environment.GetEnvironmentVariable("TRAINMAN_ROOT");
-            
-            return _default ??= new Settings(Path.Join(root, "settings.user.toml"), true);
+            return _default ??= new Settings("settings.user.toml", true);
         }
     }
     

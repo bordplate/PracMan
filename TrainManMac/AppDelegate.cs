@@ -1,3 +1,4 @@
+using TrainManCore;
 using TrainManCore.Scripting;
 using TrainManCore.Scripting.Exceptions;
 using TrainManCore.Target;
@@ -19,6 +20,65 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
         HelpMenu = CreateHelpMenuItem();
         
         Application.Delegate = this;
+        
+        // If args contain "--debug", we don't install or upgrade the user files and we set the current path to the Resources/User directory
+        if (Array.Exists(Environment.GetCommandLineArgs(), arg => arg == "--debug")) {
+            NSFileManager.DefaultManager.ChangeCurrentDirectory(Path.Combine(NSBundle.MainBundle.ResourcePath, "User"));
+        } else {
+            InstallOrUpgradeUserFiles();
+        }
+    }
+
+    public void InstallOrUpgradeUserFiles() {
+        if (NSFileManager.DefaultManager.GetUrls(NSSearchPathDirectory.ApplicationSupportDirectory,
+                NSSearchPathDomain.User).First().Path is not { } appSupportPath) {
+            new NSAlert {
+                AlertStyle = NSAlertStyle.Critical,
+                InformativeText = "Could not find the application support directory.",
+                MessageText = "Error"
+            }.RunModal();
+            return;
+        }
+        
+        if (NSBundle.MainBundle.ResourcePath is not { } resourcePath) {
+            new NSAlert {
+                AlertStyle = NSAlertStyle.Critical,
+                InformativeText = "Could not find the resource path.",
+                MessageText = "Error"
+            }.RunModal();
+            return;
+        }
+        
+        var userFilesPath = Path.Combine(appSupportPath, NSBundle.MainBundle.BundleIdentifier);
+        var currentVersion = NSBundle.MainBundle.InfoDictionary["CFBundleShortVersionString"].ToString();
+        
+        if (!Directory.Exists(userFilesPath)) {
+            Directory.CreateDirectory(userFilesPath);
+        }
+        
+        NSFileManager.DefaultManager.ChangeCurrentDirectory(userFilesPath);
+        
+        var installedVersion = Settings.Default.Get("Version", "0.0", false)!;
+        
+        // If the installed version is less than the current version, we need to upgrade or install the user files
+        if (new Version(installedVersion) < new Version(currentVersion)) {
+            InstallFilesFromResource(Path.Combine(resourcePath, "User", "controllerskins"), Path.Combine(userFilesPath, "controllerskins"));
+            InstallFilesFromResource(Path.Combine(resourcePath, "User", "Scripts"), Path.Combine(userFilesPath, "Scripts"));
+            
+            Settings.Default.Set("Version", currentVersion);
+        }
+    }
+    
+    public void InstallFilesFromResource(string resourcePath, string destinationPath) {
+        foreach (var file in Directory.GetFiles(resourcePath, "*", SearchOption.AllDirectories)) {
+            var relativePath = file.Substring(resourcePath.Length + 1);
+            var destinationFilePath = Path.Combine(destinationPath, relativePath);
+            
+            if (!File.Exists(destinationFilePath)) {
+                Directory.CreateDirectory(Path.GetDirectoryName(destinationFilePath)!);
+                File.Copy(file, destinationFilePath);
+            }
+        }
     }
     
     public override void DidFinishLaunching(NSNotification notification) {

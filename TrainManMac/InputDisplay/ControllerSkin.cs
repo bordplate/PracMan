@@ -7,8 +7,6 @@ class ControllerSkin {
 
         public ControllerSkin(string skinPath) {
             Buttons = new Dictionary<string, InputPlot>();
-            
-            skinPath = Path.Combine(Environment.GetEnvironmentVariable("TRAINMAN_ROOT") ?? "", skinPath);
 
             var config = File.ReadAllText(Path.Combine(skinPath, "skin.txt"));
 
@@ -61,7 +59,7 @@ class ControllerSkin {
         public static List<string> GetSkins() {
             var skins = new List<string>();
 
-            var skinsPath = Path.Combine(Environment.GetEnvironmentVariable("TRAINMAN_ROOT") ?? "", "controllerskins");
+            var skinsPath = "controllerskins";
 
             if (!Directory.Exists(skinsPath))
                 return skins;

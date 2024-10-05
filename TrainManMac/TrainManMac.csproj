@@ -15,4 +15,24 @@
     <ItemGroup>
       <PackageReference Include="SparkleSharp" Version="1.0.0-rc8" />
     </ItemGroup>
+
+    <ItemGroup>
+        <!-- Define the folders/files you want to copy -->
+        <ScriptsFolder Include="..\Scripts\**\*" />
+        <SkinsFolder Include="..\controllerskins\**\*" />
+    </ItemGroup>
+
+    <Target Name="CopyFolderStructureToAppBundle" AfterTargets="Build">
+        <!-- Define where the Resources folder is located in the app bundle -->
+        <PropertyGroup>
+            <AppBundleResourcesFolder>$(OutputPath)$(AssemblyName).app/Contents/Resources/</AppBundleResourcesFolder>
+        </PropertyGroup>
+
+        <!-- Ensure the destination folders are created and copy files with directory structure -->
+        <Copy SourceFiles="@(ScriptsFolder)"
+              DestinationFiles="@(ScriptsFolder->'$(AppBundleResourcesFolder)/User/Scripts/%(RecursiveDir)%(Filename)%(Extension)')" />
+        <Copy SourceFiles="@(SkinsFolder)"
+              DestinationFiles="@(SkinsFolder->'$(AppBundleResourcesFolder)/User/controllerskins/%(RecursiveDir)%(Filename)%(Extension)')" />
+    </Target>
+
 </Project>
