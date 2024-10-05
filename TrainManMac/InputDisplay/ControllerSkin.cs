@@ -57,4 +57,21 @@ class ControllerSkin {
                 Buttons[buttonName] = inputPlot;
             }
         }
+        
+        public static List<string> GetSkins() {
+            var skins = new List<string>();
+
+            var skinsPath = Path.Combine(Environment.GetEnvironmentVariable("TRAINMAN_ROOT") ?? "", "controllerskins");
+
+            if (!Directory.Exists(skinsPath))
+                return skins;
+
+            foreach (var skin in Directory.GetDirectories(skinsPath)) {
+                if (File.Exists(Path.Combine(skin, "skin.txt"))) {
+                    skins.Add(Path.GetFileName(skin));
+                }
+            }
+
+            return skins;
+        }
     }

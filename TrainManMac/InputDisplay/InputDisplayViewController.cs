@@ -6,38 +6,118 @@ using System.Linq;
 using AppKit;
 using CoreGraphics;
 using Foundation;
+using TrainManCore;
 using TrainManCore.Scripting;
 
 namespace TrainMan;
 
-public class InputDisplayViewController : NSViewController {
+public class InputDisplayViewController : NSViewController, INSMenuDelegate {
     public NSWindow Window;
 
-    private readonly InputDisplayView _inputDisplayView;
+    private InputDisplayView _inputDisplayView;
+    
+    private Inputs _inputs;
+    
+    private NSTitlebarAccessoryViewController _titlebarAccessoryViewController;
+    private NSPopUpButton _skinSelectorPopUp;
+
+    private string _selectedSkinName;
 
     public InputDisplayViewController(Inputs inputs) {
-        _inputDisplayView = new InputDisplayView(inputs);
-        var viewFrame = _inputDisplayView.Frame;
-
-        View.Frame = viewFrame;
+        _inputs = inputs;
+        _selectedSkinName = Settings.Default.Get("InputDisplay.skin", "default", false)!;
+        
+        _inputDisplayView = new InputDisplayView(_inputs, _selectedSkinName);
+        _titlebarAccessoryViewController = new NSTitlebarAccessoryViewController();
 
         Window = new NSWindow(
-            new CGRect(0, 0, viewFrame.Width, viewFrame.Height),
+            new CGRect(0, 0, 150, 150),
             NSWindowStyle.Titled | NSWindowStyle.Closable | NSWindowStyle.Miniaturizable,
             NSBackingStore.Buffered,
             true) {
             Title = $"Input Display"
         };
-
-        Window.ContentViewController = this;
+        
+        Window.AddTitlebarAccessoryViewController(_titlebarAccessoryViewController);
 
         Window.Center();
+        
+        _skinSelectorPopUp = new NSPopUpButton {
+            TranslatesAutoresizingMaskIntoConstraints = false
+        };
+        _skinSelectorPopUp.Action = new ObjCRuntime.Selector("skinSelected:");
+        
+        foreach (var skin in ControllerSkin.GetSkins()) {
+            _skinSelectorPopUp.AddItem(skin);
+            
+            if (skin == _selectedSkinName) {
+                _skinSelectorPopUp.SelectItem(_skinSelectorPopUp.ItemTitles().ToList().IndexOf(skin));
+            }
+        }
+        
+        _skinSelectorPopUp.Items().First().Menu!.Delegate = this;
+        
+        Window.ContentViewController = this;
+        Window.TitlebarAppearsTransparent = false;
     }
 
     public override void ViewDidLoad() {
         base.ViewDidLoad();
 
         View.AddSubview(_inputDisplayView);
+        
+        var viewFrame = _inputDisplayView.Frame;
+        var titlebarAccessoryViewController = Window.TitlebarAccessoryViewControllers[0];
+        
+        titlebarAccessoryViewController.View.AddSubview(_skinSelectorPopUp);
+        titlebarAccessoryViewController.LayoutAttribute = NSLayoutAttribute.Right;
+
+        var titlebarHeight = titlebarAccessoryViewController.View.Frame.Height;
+        
+        titlebarAccessoryViewController.View.AddConstraints(NSLayoutConstraint.FromVisualFormat("|-[skinSelectorPopUp(150)]-4-|",
+            NSLayoutFormatOptions.None, null, new NSDictionary("skinSelectorPopUp", _skinSelectorPopUp)));
+        titlebarAccessoryViewController.View.AddConstraints(NSLayoutConstraint.FromVisualFormat("V:|-4-[skinSelectorPopUp]",
+            NSLayoutFormatOptions.AlignAllBaseline, null, new NSDictionary("skinSelectorPopUp", _skinSelectorPopUp)));
+        
+        View.Frame = viewFrame;
+        _inputDisplayView.Frame = new CGRect(0, 0, viewFrame.Width, viewFrame.Height);
+        Window.SetFrame(new CGRect(Window.Frame.X, Window.Frame.Y, viewFrame.Width, viewFrame.Height+titlebarHeight), false);
+    }
+    
+    [Export("skinSelected:")]
+    public void SkinSelected(NSObject sender) {
+        if (sender is not NSPopUpButton popUpButton) {
+            return;
+        }
+
+        _selectedSkinName = popUpButton.SelectedItem.Title;
+        
+        Settings.Default.Set("InputDisplay.skin", _selectedSkinName);
+        
+        _inputDisplayView.RemoveFromSuperview();
+        _inputDisplayView.Dispose();
+        
+        _inputDisplayView = new InputDisplayView(_inputs, _selectedSkinName);
+        
+        View.AddSubview(_inputDisplayView);
+        
+        var viewFrame = _inputDisplayView.Frame;
+        var titlebarAccessoryViewController = Window.TitlebarAccessoryViewControllers[0];
+        var titlebarHeight = titlebarAccessoryViewController.View.Frame.Height;
+        
+        Window.SetFrame(new CGRect(Window.Frame.X, Window.Frame.Y, viewFrame.Width, viewFrame.Height+titlebarHeight), true, true);
+    }
+    
+    [Export("menuWillOpen:")]
+    public void MenuWillOpen(NSMenu menu) {
+        _skinSelectorPopUp.RemoveAllItems();
+        foreach (var skin in ControllerSkin.GetSkins()) {
+            _skinSelectorPopUp.AddItem(skin);
+            
+            if (skin == _selectedSkinName) {
+                _skinSelectorPopUp.SelectItem(_skinSelectorPopUp.ItemTitles().ToList().IndexOf(skin));
+            }
+        }
     }
 }
 
@@ -46,11 +126,10 @@ public class InputDisplayView : NSView {
     private Inputs.InputState _currentInputs = new();
     private ControllerSkin _controllerSkin;
     
-    public InputDisplayView(Inputs inputs) {
+    public InputDisplayView(Inputs inputs, string skinPath) {
         _inputs = inputs;
         
-        string skinPath = "controllerskins/default";
-        _controllerSkin = new ControllerSkin(skinPath);
+        _controllerSkin = new ControllerSkin(Path.Combine("controllerskins", skinPath));
 
         Frame = new CGRect(0, 0, _controllerSkin.Buttons["base"].SpriteWidth,
             _controllerSkin.Buttons["base"].SpriteHeight);
