@@ -5,18 +5,20 @@ using TrainManCore.Target;
 namespace TrainMan;
 
 [Register("AppDelegate")]
-public class AppDelegate : NSApplicationDelegate {
+public class AppDelegate : NSApplicationDelegate, IApplication {
     public AttachViewController AttachViewController = new();
 
-    public NSMenu MainMenu = new NSMenu();
+    public NSMenu MainMenu = new();
     public NSMenuItem WindowsMenu;
     public NSMenuItem HelpMenu;
     
-    private Dictionary<Target, Dictionary<string, object>> _activeTargets = new();
+    private Dictionary<Target, ModLoaderViewController> _modLoaders = new();
 
     public AppDelegate() {
         WindowsMenu = CreateWindowMenuItem();
         HelpMenu = CreateHelpMenuItem();
+        
+        Application.Delegate = this;
     }
     
     public override void DidFinishLaunching(NSNotification notification) {
@@ -27,12 +29,11 @@ public class AppDelegate : NSApplicationDelegate {
     
     public override bool ApplicationShouldHandleReopen(NSApplication sender, bool hasVisibleWindows)
     {
-        if (!hasVisibleWindows)
-        {
+        if (!hasVisibleWindows) {
             // We activate the mod loader if there are active targets, otherwise we show the attach view controller
-            if (_activeTargets.Count > 0) {
-                foreach (var target in _activeTargets.Keys) {
-                    ModLoaderFor(target).Window.MakeKeyAndOrderFront(this);
+            if (Application.ActiveTargets.Count > 0) {
+                foreach (var target in Application.ActiveTargets) {
+                    OpenModLoader(target);
                 }
             } else {
                 AttachViewController.Window.MakeKeyAndOrderFront(this);
@@ -89,6 +90,7 @@ public class AppDelegate : NSApplicationDelegate {
 
         windowMenu.AddItem(new NSMenuItem("Minimize", new ObjCRuntime.Selector("performMiniaturize:"), "m"));
         windowMenu.AddItem(new NSMenuItem("Zoom", new ObjCRuntime.Selector("performZoom:"), ""));
+        windowMenu.AddItem(new NSMenuItem("Close", new ObjCRuntime.Selector("performClose:"), "w"));
         windowMenu.AddItem(NSMenuItem.SeparatorItem);
         windowMenu.AddItem(new NSMenuItem("Bring All to Front", new ObjCRuntime.Selector("arrangeInFront:"), ""));
 
@@ -109,7 +111,6 @@ public class AppDelegate : NSApplicationDelegate {
 
     void CreateMenu() {
         MainMenu.AddItem(CreateAppMenuItem());
-
         MainMenu.AddItem(CreateEditMenuItem());
         
         MainMenu.AddItem(WindowsMenu);
@@ -126,110 +127,31 @@ public class AppDelegate : NSApplicationDelegate {
         NSApplication.SharedApplication.WindowsMenu = WindowsMenu.Submenu!;
         NSApplication.SharedApplication.HelpMenu = HelpMenu.Submenu;
     }
-    
-    public void AddTarget(Target target) {
-        if (!_activeTargets.ContainsKey(target)) {
-            _activeTargets[target] = new();
+
+    public void OpenModLoader(Target target) {
+        if (!_modLoaders.ContainsKey(target)) {
+            _modLoaders[target] = new ModLoaderViewController(target);
         }
-    }
-    
-    public void RemoveTarget(Target target) {
-        if (_activeTargets.ContainsKey(target)) {
-            _activeTargets.Remove(target);
-        }
-    }
-    
-    public void AddModuleForTarget(Module module, Target target) {
-        if (!_activeTargets.ContainsKey(target)) {
-            throw new Exception("Target not found.");
-        }
-        
-        if (!_activeTargets[target].ContainsKey("Modules")) {
-            _activeTargets[target]["Modules"] = new List<Module>();
-        }
-        
-        if (_activeTargets[target]["Modules"] is List<Module> modules) {
-            modules.Add(module);
-        }
-    }
-    
-    public void RemoveModuleForTarget(Module module, Target target) {
-        if (!_activeTargets.TryGetValue(target, out var activeTarget)) {
-            throw new Exception("Target not found.");
-        }
-        
-        if (!activeTarget.ContainsKey("Modules")) {
-            throw new Exception("No modules found for target.");
-        }
-        
-        if (_activeTargets[target]["Modules"] is List<Module> modules) {
-            modules.Add(module);
-        }
-    }
-    
-    public List<Module>? ModulesForTarget(Target target) {
-        if (!_activeTargets.TryGetValue(target, out var activeTarget)) {
-            return null;
-        }
-        
-        if (!activeTarget.ContainsKey("Modules")) {
-            return new();
-        }
-        
-        return _activeTargets[target]["Modules"] as List<Module>;
+
+        _modLoaders[target].Window.MakeKeyAndOrderFront(null);
     }
 
-    public List<Module> AllModulesForTarget(Target target) {
-        // Get all modules for a target, enabled modules should be replaced with their enabled versions
-        var allModules = Module.GetModulesForTitle(target.GetGameTitleID(), target);
-        var enabledModules = ModulesForTarget(target);
-        
-        if (enabledModules == null) {
-            return allModules;
-        }
-        
-        foreach (var module in enabledModules) {
-            var index = allModules.FindIndex(m => m.ModulePath == module.ModulePath);
-            allModules[index] = module;
-        }
-        
-        return allModules;
-    }
-
-    public ModLoaderViewController ModLoaderFor(Target target) {
-        if (_activeTargets[target].ContainsKey("ModLoader")) {
-            // Reopen the mod loader
-            if (_activeTargets[target]["ModLoader"] is ModLoaderViewController modLoader) {
-                return modLoader;
-            }
-        }
-        
-        // Create a new mod loader
-        var loader = new ModLoaderViewController(target);
-
-        _activeTargets[target]["ModLoader"] = loader;
-        
-        return loader;
-    }
-
-    public void EnableModForTarget(Module module, Target target) {
+    public void OnModuleLoad(Module module, Target target) {
         var trainerModule = new TrainerModule();
         module.TrainerDelegate = trainerModule;
-                        
-        AddModuleForTarget(module, target);
-
+        
         module.OnExit += () => {
-            RemoveModuleForTarget(module, target);
-
-            if (ModulesForTarget(target)?.Count == 0 &&
-                !ModLoaderFor(target).Window.IsVisible) {
+            _modLoaders.TryGetValue(target, out var modLoaderWindow);
+            
+            if (target.Modules.Count == 0 &&
+                (modLoaderWindow == null || !modLoaderWindow.Window.IsVisible)) {
                 target.Stop();
             }
         };
 
         trainerModule.AddMenu("Trainer", (menu) => {
             menu.AddItem("Mod loader...", () => {
-                ModLoaderFor(target).Window.MakeKeyAndOrderFront(null);
+                OpenModLoader(target);
             });
                             
             if (module.Settings.Get<string>("General.inputs_controller", "") != "") {
@@ -268,27 +190,14 @@ public class AppDelegate : NSApplicationDelegate {
         });
         
         trainerModule.ActivateMenu();
-
-        try {
-            module.Load();
-        }
-        catch (ScriptException exception) {
-            new NSAlert {
-                AlertStyle = NSAlertStyle.Critical,
-                InformativeText = exception.Message,
-                MessageText = "Error loading module",
-            }.RunModal();
-        } catch {
-            new NSAlert {
-                AlertStyle = NSAlertStyle.Critical,
-                InformativeText = "An unknown error occurred while loading the module.",
-                MessageText = "Error loading module",
-            }.RunModal();
-        }
     }
     
     public override void WillTerminate(NSNotification notification)
     {
         // Insert code here to tear down your application
+    }
+    
+    public void RunOnMainThread(Action action) {
+        NSApplication.SharedApplication.InvokeOnMainThread(action);
     }
 }

@@ -1,3 +1,5 @@
+using TrainManCore.Scripting;
+
 namespace TrainManCore.Target;
 
 public class DummyTarget(string title): Target(title) {
@@ -15,6 +17,8 @@ public class DummyTarget(string title): Target(title) {
     
     public override bool Start(AttachedCallback callback) {
         if (_address != "ERROR") {
+            Application.ActiveTargets.Add(this);
+            
             callback(true, null);
         } else {
             callback(false, "Dummy error");

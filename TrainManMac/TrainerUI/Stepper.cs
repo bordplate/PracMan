@@ -34,13 +34,15 @@ public class Stepper: NSView, IStepper {
         
         _stepper.Activated += (sender, e) => {
             _textField.StringValue = _stepper.IntValue.ToString();
-            _callback.Call(_stepper.IntValue);
+            
+            TrainerModule.TryInvoke(Window, callback, _stepper.IntValue);
         };
         
         _textField.Changed += (sender, e) => {
             if (int.TryParse(_textField.StringValue, out var value)) {
                 _stepper.IntValue = value;
-                _callback.Call(value);
+                
+                TrainerModule.TryInvoke(Window, callback, value);
             }
         };
         
@@ -76,7 +78,6 @@ public class NumberFormatter : NSNumberFormatter {
         Maximum = NSNumber.FromInt32(maxValue);
         PartialStringValidationEnabled = false;
     }
-    
     
     [Export ("isPartialStringValid:newEditingString:errorDescription:")]
     public bool IsPartialStringValidNewEditingStringErrorDescription(NSString partialString, ref NSString newString, ref NSString error) {

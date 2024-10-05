@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using TrainManCore.Exceptions;
+using TrainManCore.Scripting;
 
 namespace TrainManCore.Target;
 
@@ -37,7 +38,7 @@ public class Ratchetron(string ip) : Target(ip) {
                 _client = new TcpClient();
 
                 if (!_client.ConnectAsync(_ip, Port).Wait(5000)) {
-                    RunOnMainThread?.Invoke(() => {
+                    Application.Delegate?.RunOnMainThread(() => {
                         callback(false, "Timed out connecting to PS3");
                     });
 
@@ -62,21 +63,23 @@ public class Ratchetron(string ip) : Target(ip) {
                     _connected = true;
                     _pid = GetCurrentPID();
                     
-                    RunOnMainThread?.Invoke(() => {
+                    Application.ActiveTargets.Add(this);
+                    
+                    Application.Delegate?.RunOnMainThread(() => {
                         callback(true, null);
                     });
                 }
             } catch (SocketException) {
-                RunOnMainThread?.Invoke(() => {
+                Application.Delegate?.RunOnMainThread(() => {
                     callback(false, "Socket error: Failed to connect to PS3");
                 });
             } catch (Exception) {
-                RunOnMainThread?.Invoke(() => {
+                Application.Delegate?.RunOnMainThread(() => {
                     callback(false, "Unknown error: Failed to connect to PS3");
                 });
             }
             
-            RunOnMainThread?.Invoke(() => {
+            Application.Delegate?.RunOnMainThread(() => {
                 callback(false, "Mega unknown error: Failed to connect to PS3");
             });
         });
@@ -101,7 +104,7 @@ public class Ratchetron(string ip) : Target(ip) {
             throw new TargetException("Not connected to PS3");
         }
 
-        byte[] cmd = { 0x06 };
+        byte[] cmd = [0x06];
 
         WriteStream(cmd, 0, 1);
 

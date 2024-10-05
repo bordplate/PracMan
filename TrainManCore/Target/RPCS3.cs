@@ -1,5 +1,6 @@
 using System.Net.Sockets;
 using TrainManCore.Exceptions;
+using TrainManCore.Scripting;
 using TrainManCore.Target.API;
 
 namespace TrainManCore.Target;
@@ -62,6 +63,9 @@ public class RPCS3(string slot) : Target(slot) {
         try {
             _pine = new PINE(slot);
             callback(true, null);
+            
+            Application.ActiveTargets.Add(this);
+            
             return true;
         } catch (SocketException ex) {
             callback(false, $"Couldn't open IPC port {slot}. Did you enable IPC in RPCS3 (Configuration -> IPC)? Make sure the port is correct and not already in use.");
@@ -233,7 +237,7 @@ public class RPCS3(string slot) : Target(slot) {
                         WriteMemory(item.Address, item.Size, item.SetValue);
                     }
 
-                    RunOnMainThread?.Invoke(() => {
+                    Application.Delegate?.RunOnMainThread(() => {
                         item.Callback.Invoke(currentValue.Reverse().ToArray());
                     });
                 }

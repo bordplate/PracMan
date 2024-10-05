@@ -20,7 +20,7 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
     public ModLoaderViewController(Target target) : base() {
         _target = target;
 
-        _mods = Module.GetModulesForTitle(target.GetGameTitleID(), target);
+        _mods = Application.GetModulesForTitle(target.TitleId);
         
         _modsTableView = new NSTableView {
             TranslatesAutoresizingMaskIntoConstraints = false,
@@ -83,7 +83,7 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
             NSWindowStyle.Titled | NSWindowStyle.Closable | NSWindowStyle.Miniaturizable | NSWindowStyle.Resizable, 
             NSBackingStore.Buffered, 
             true) {
-            Title = $"Mod Loader ({target.GetGameTitleID()})",
+            Title = $"Mod Loader ({target.TitleId})",
             ContentViewController = this,
         };
         
@@ -243,8 +243,6 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
     }
     
     public NSView GetViewForItem(NSTableView tableView, NSTableColumn tableColumn, nint row) {
-        var appDelegate = (AppDelegate)NSApplication.SharedApplication.Delegate;
-        
         var mod = _mods[(int)row];
         
         if (tableColumn.Identifier == "Check") {
@@ -257,7 +255,8 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
                 TranslatesAutoresizingMaskIntoConstraints = true,
                 Title = "",
                 BezelStyle = NSBezelStyle.RegularSquare,
-                State = mod.IsLoaded ? NSCellStateValue.On : NSCellStateValue.Off,
+                State = _target.Modules.Find(m => m.ModulePath == _mods[(int)row].ModulePath) != null
+                    ? NSCellStateValue.On : NSCellStateValue.Off
             };
             
             checkBox.Tag = (int)row;
@@ -319,17 +318,14 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
     }
     
     public void WindowDidBecomeKey(object? sender, EventArgs eventArgs) {
-        _mods = ((AppDelegate)NSApplication.SharedApplication.Delegate).AllModulesForTarget(_target);
+        _mods = Application.GetModulesForTitle(_target.TitleId);
         _modsTableView.ReloadData();
     }
     
     public override void ViewWillDisappear() {
         base.ViewWillDisappear();
 
-        var appDelegate = (AppDelegate)NSApplication.SharedApplication.Delegate;
-        var modules = appDelegate.ModulesForTarget(_target) ?? [];
-
-        if (modules.Count == 0) {
+        if (_target.Modules.Count == 0) {
             _target.Stop();
         }
     }
@@ -344,15 +340,11 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
         bool isChecked = checkBox.State == NSCellStateValue.On;
         
         if (isChecked) {
-            ((AppDelegate)NSApplication.SharedApplication.Delegate).EnableModForTarget(_mods[row], _target);
+            _mods[row].Load(_target);
         } else {
-            _mods[row].Exit();
-            
-            // Replace the mod instance with a fresh one
-            var allModules = Module.GetModulesForTitle(_target.GetGameTitleID(), _target);
-            if (allModules.Find(m => m.ModulePath == _mods[row].ModulePath) is {} newInstance) {
-                _mods[row] = newInstance;
-            }
+            // Find the mod in the target's modules and unload it
+            var mod = _target.Modules.Find(m => m.ModulePath == _mods[row].ModulePath);
+            mod?.Exit();
         }
     }
 }

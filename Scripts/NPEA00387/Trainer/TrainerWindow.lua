@@ -129,7 +129,7 @@ function TrainerWindow:OnLoad()
         
         column:AddLabel("File Time:")
         column:AddTextField(function(value)
-            
+            LoadModule("NPEA00387", "rc3-save")
         end)
     end)
     

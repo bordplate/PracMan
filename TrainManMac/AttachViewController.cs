@@ -1,6 +1,7 @@
 using System.Reflection;
+using TrainManCore.Scripting;
+using TrainManCore.Scripting.Exceptions;
 using TrainManCore.Target;
-using Module = TrainManCore.Scripting.Module;
 
 namespace TrainMan;
 
@@ -118,15 +119,10 @@ public class AttachViewController: NSViewController {
         }
         
         var target = CreateTargetInstance(targetAddress);
-        target.RunOnMainThread = (action) => {
-            NSApplication.SharedApplication.InvokeOnMainThread(() => {
-                action();
-            });
-        };
         
         target.Start((success, message) => {
             if (success) {
-                if (target.GetGameTitleID() == "") {
+                if (target.TitleId == "") {
                     alert.MessageText = "No game running";
                     alert.InformativeText = "You must run a game before attaching to the process.";
 
@@ -139,27 +135,38 @@ public class AttachViewController: NSViewController {
                     return;
                 }
                 
-                appDelegate.AddTarget(target);
-                
                 target.OnStop += () => {
                     appDelegate.ActivateMenu();
-                    appDelegate.RemoveTarget(target);
                 };
 
-                var modules = Module.GetModulesForTitle(target.GetGameTitleID(), target);
+                var modules = Application.GetModulesForTitle(target.TitleId);
 
                 bool atLeastOneModLoaded = false;
 
                 foreach (var module in modules) {
                     if (module.Settings.Get<bool>("General.autorun")) {
-                        appDelegate.EnableModForTarget(module, target);
-                        
+                        try {
+                            module.Load(target);
+                        }
+                        catch (ScriptException exception) {
+                            new NSAlert {
+                                AlertStyle = NSAlertStyle.Critical,
+                                InformativeText = exception.Message,
+                                MessageText = "Error loading module",
+                            }.RunModal();
+                        } catch {
+                            new NSAlert {
+                                AlertStyle = NSAlertStyle.Critical,
+                                InformativeText = "An unknown error occurred while loading the module.",
+                                MessageText = "Error loading module",
+                            }.RunModal();
+                        }
                         atLeastOneModLoaded = true;
                     }
                 }
 
                 if (!atLeastOneModLoaded) {
-                    appDelegate.ModLoaderFor(target).Window.MakeKeyAndOrderFront(null);
+                    Application.Delegate?.OpenModLoader(target);
                 }
                 
                 Window.Close();

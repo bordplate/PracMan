@@ -1,0 +1,4 @@
+[General]
+name = "Ratchet & Clank HD Trilogy Game Selector"
+entry = "main.lua"
+autorun = true

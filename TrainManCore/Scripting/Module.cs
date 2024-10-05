@@ -8,22 +8,26 @@ using TrainManCore.Target;
 
 namespace TrainManCore.Scripting;
 
-public class Module(string title, string path, Target.Target target) {
+public class Module(string title, string path) {
     public event Action? OnExit;
     
     public string Title = title;
     public readonly string ModulePath = path;
+    public string ModuleIdentifier = Path.GetFileName(path);
     public bool IsLoaded;
     public readonly Settings Settings = new(Path.Combine(path, "config.toml"));
 
-    private readonly Target.Target _target = target;
+    private Target.Target? _target;
     private Inputs? _inputs;
 
     private readonly Lua _state = new();
 
     public ITrainer? TrainerDelegate;
 
-    public void Load() {
+    public void Load(Target.Target target) {
+        _target = target;
+        Application.Delegate?.OnModuleLoad(this, _target);
+        
         var entry = Settings.Get<string>("General.entry");
         
         if (entry != null) {
@@ -71,11 +75,14 @@ public class Module(string title, string path, Target.Target target) {
             }
         }
         
+        _target.Modules.Add(this);
+        
         IsLoaded = true;
     }
     
     public void Exit() {
         IsLoaded = false;
+        _target?.Modules.Remove(this);
         
         (_state["OnUnload"] as LuaFunction)?.Call();
         
@@ -85,6 +92,10 @@ public class Module(string title, string path, Target.Target target) {
     }
 
     private void SetupState(Lua state) {
+        if (_target == null) {
+            throw new InvalidOperationException("Module has not been loaded before trying to setup Lua state.");
+        }
+        
         state.UseTraceback = true;
         state.LoadCLRPackage();
         
@@ -93,18 +104,19 @@ public class Module(string title, string path, Target.Target target) {
         }
         
         // Set package path to the runtime folder and the module's folder
-        state.DoString($"package.path = package.path .. ';{GetModulesRoot()}/Runtime/?.lua;{ModulePath}/?.lua'", "set package path");
+        state.DoString($"package.path = package.path .. ';{Application.GetModulesRoot()}/Runtime/?.lua;{ModulePath}/?.lua'", "set package path");
         
         foreach (var (key, value) in LuaFunctions.Functions) {
             state[key] = value;
         }
         
-        state.DoString(File.ReadAllText(Path.Combine(GetModulesRoot(), "Runtime/runtime.lua")), "runtime.lua");
+        state.DoString(File.ReadAllText(Path.Combine(Application.GetModulesRoot(), "Runtime/runtime.lua")), "runtime.lua");
         
         state["Module"] = this;
         state["print"] = (string text) => {
             Console.WriteLine(text);
         };
+        state["Exit"] = Exit;
 
         state["AddMenu"] = TrainerDelegate.AddMenu;
 
@@ -123,6 +135,13 @@ public class Module(string title, string path, Target.Target target) {
 
         state["Ratchetron"] = _target;
         state["Target"] = _target;
+        
+        state["LoadModule"] = (string title, string moduleName) => {
+            Application.LoadModule(_target, title, moduleName);
+        };
+        state["SetTitleID"] = (string titleId) => {
+            _target.TitleId = titleId;
+        };
     }
 
     public IWindow CreateWindow(LuaTable luaObject, bool isMainWindow = false) {
@@ -181,36 +200,5 @@ public class Module(string title, string path, Target.Target target) {
         }
         
         return _inputs;
-    }
-    
-    public static string GetModulesRoot() {
-        var rootDir = Environment.GetEnvironmentVariable("TRAINMAN_ROOT");
-        
-        if (rootDir == null) {
-            rootDir = Directory.GetCurrentDirectory();
-        }
-        
-        return Path.Combine(rootDir, "Scripts");
-    }
-    
-    public static List<Module> GetModulesForTitle(string title, Target.Target target) {
-        if (title == "") {
-            return [];
-        }
-        
-        var scriptsDir = Path.Combine(GetModulesRoot(), title);
-        
-        if (Directory.Exists(scriptsDir)) {
-            var dirs = Directory.GetDirectories(scriptsDir);
-            List<Module> modules = [];
-            
-            foreach (var dir in dirs) {
-                modules.Add(new Module(title, dir, target));
-            }
-        
-            return modules;
-        }
-        
-        return [];
     }
 }

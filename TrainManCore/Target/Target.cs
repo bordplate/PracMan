@@ -1,14 +1,26 @@
-using System.Runtime.InteropServices.Marshalling;
 using System.Text;
+using TrainManCore.Scripting;
 
 namespace TrainManCore.Target;
 
 public abstract class Target {
+    public List<Module> Modules = new();
+    
     protected string _address;
+    private string? _titleId;
+    
+    public string TitleId {
+        get {
+            if (_titleId == null) {
+                _titleId = GetGameTitleID();
+            }
+
+            return _titleId;
+        }
+        set => _titleId = value;
+    }
     
     public event Action? OnStop;
-
-    public Action<Action>? RunOnMainThread;
     
     public delegate void DicoveredTargetsCallback(List<string> targets);
     public delegate void AttachedCallback(bool success, string? message);
@@ -33,6 +45,7 @@ public abstract class Target {
 
     public virtual bool Stop() {
         OnStop?.Invoke();
+        Application.ActiveTargets.Remove(this);
 
         return true;
     }
