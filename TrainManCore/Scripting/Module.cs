@@ -11,18 +11,18 @@ namespace TrainManCore.Scripting;
 public class Module(string title, string path) {
     public event Action? OnExit;
     
-    public string Title = title;
-    public readonly string ModulePath = path;
-    public string ModuleIdentifier = Path.GetFileName(path);
+    public readonly string Title = title;
+    public readonly string Path = path;
+    public readonly string Identifier = System.IO.Path.GetFileName(path);
     public bool IsLoaded;
-    public readonly Settings Settings = new(Path.Combine(path, "config.toml"));
+    public readonly Settings Settings = new(System.IO.Path.Combine(path, "config.toml"));
 
     private Target.Target? _target;
     private Inputs? _inputs;
 
     private readonly Lua _state = new();
 
-    public ITrainer? TrainerDelegate;
+    public IModule? Delegate;
 
     public void Load(Target.Target target) {
         _target = target;
@@ -31,7 +31,7 @@ public class Module(string title, string path) {
         var entry = Settings.Get<string>("General.entry");
         
         if (entry != null) {
-            var entryFile = File.ReadAllText(Path.Combine(ModulePath, entry));
+            var entryFile = File.ReadAllText(System.IO.Path.Combine(Path, entry));
         
             if (entryFile == null) {
                 throw new ScriptException("Entry point file not found.");
@@ -61,7 +61,7 @@ public class Module(string title, string path) {
                 if (patches[addressString].TomlType == TomlObjectType.String) {
                     // This is a binary file that we need to load and write to memory
                     var filename = patches.Get<string>(addressString);
-                    var bytes = File.ReadAllBytes(Path.Combine(ModulePath, filename));
+                    var bytes = File.ReadAllBytes(System.IO.Path.Combine(Path, filename));
                     
                     // Write 1024 bytes at a time
                     for (var i = 0; i < bytes.Length; i += 1024) {
@@ -86,7 +86,7 @@ public class Module(string title, string path) {
         
         (_state["OnUnload"] as LuaFunction)?.Call();
         
-        TrainerDelegate?.CloseAllWindows();
+        Delegate?.CloseAllWindows();
 
         OnExit?.Invoke();
     }
@@ -99,18 +99,18 @@ public class Module(string title, string path) {
         state.UseTraceback = true;
         state.LoadCLRPackage();
         
-        if (TrainerDelegate == null) {
-            throw new ScriptException("TrainerDelegate not set.");
+        if (Delegate == null) {
+            throw new ScriptException("Module Delegate not set.");
         }
         
         // Set package path to the runtime folder and the module's folder
-        state.DoString($"package.path = package.path .. ';{Application.GetModulesRoot()}/Runtime/?.lua;{ModulePath}/?.lua'", "set package path");
+        state.DoString($"package.path = package.path .. ';{Application.GetModulesRoot()}/Runtime/?.lua;{Path}/?.lua'", "set package path");
         
         foreach (var (key, value) in LuaFunctions.Functions) {
             state[key] = value;
         }
         
-        state.DoString(File.ReadAllText(Path.Combine(Application.GetModulesRoot(), "Runtime/runtime.lua")), "runtime.lua");
+        state.DoString(File.ReadAllText(System.IO.Path.Combine(Application.GetModulesRoot(), "Runtime/runtime.lua")), "runtime.lua");
         
         state["Module"] = this;
         state["print"] = (string text) => {
@@ -118,17 +118,17 @@ public class Module(string title, string path) {
         };
         state["Exit"] = Exit;
 
-        state["AddMenu"] = TrainerDelegate.AddMenu;
+        state["AddMenu"] = Delegate.AddMenu;
 
         state["Alert"] = (string text) => {
             if (_target.CanInlineNotify()) {
                 _target.Notify(text);
             } else {
-                TrainerDelegate.Alert(text);
+                Delegate.Alert(text);
             }
         };
 
-        state["Settings"] = new Settings(Path.Combine(ModulePath, "settings.user.toml"), true);
+        state["Settings"] = new Settings(System.IO.Path.Combine(Path, "settings.user.toml"), true);
         
         state["UINT_MAX"] = uint.MaxValue;
         state["INT_MAX"] = int.MaxValue;
@@ -153,7 +153,7 @@ public class Module(string title, string path) {
             throw new ScriptException($"`name` not found in class passed to `CreateWindow`.");
         }
 
-        var window = TrainerDelegate!.CreateWindow(this, luaObject, isMainWindow);
+        var window = Delegate!.CreateWindow(this, luaObject, isMainWindow);
         window.OnLoad += (window) => {
             _inputs?.BindButtonCombos(window);
         };
@@ -176,7 +176,7 @@ public class Module(string title, string path) {
         
         SetupState(state);
         
-        var entryFile = File.ReadAllText(Path.Combine(ModulePath, inputsControllerPath));
+        var entryFile = File.ReadAllText(System.IO.Path.Combine(Path, inputsControllerPath));
         
         state.DoString(entryFile, inputsControllerPath);
 
@@ -193,7 +193,7 @@ public class Module(string title, string path) {
             userSettings.Set("Inputs.has_default_combos", true);
         }
 
-        if (TrainerDelegate?.Windows is { } windows) {
+        if (Delegate?.Windows is { } windows) {
             foreach (var window in windows) {
                 _inputs.BindButtonCombos(window);
             }

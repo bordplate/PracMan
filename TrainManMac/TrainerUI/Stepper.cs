@@ -35,14 +35,14 @@ public class Stepper: NSView, IStepper {
         _stepper.Activated += (sender, e) => {
             _textField.StringValue = _stepper.IntValue.ToString();
             
-            TrainerModule.TryInvoke(Window, callback, _stepper.IntValue);
+            ModuleDelegate.TryInvoke(Window, callback, _stepper.IntValue);
         };
         
         _textField.Changed += (sender, e) => {
             if (int.TryParse(_textField.StringValue, out var value)) {
                 _stepper.IntValue = value;
                 
-                TrainerModule.TryInvoke(Window, callback, value);
+                ModuleDelegate.TryInvoke(Window, callback, value);
             }
         };
         

@@ -31,7 +31,7 @@ public abstract class Container(IWindow window) : NSStackView, IContainer {
 
         ConstrainElement(button);
         
-        ((TrainerViewController)Window).RegisterButton(button);
+        ((ModuleWindowViewController)Window).RegisterButton(button);
         
         return button;
     }
@@ -60,7 +60,7 @@ public abstract class Container(IWindow window) : NSStackView, IContainer {
         
         ConstrainElement(row);
         
-        TrainerModule.TryInvoke(window, callback, row);
+        ModuleDelegate.TryInvoke(window, callback, row);
         
         return row;
     }
@@ -75,7 +75,7 @@ public abstract class Container(IWindow window) : NSStackView, IContainer {
         AddConstraints(NSLayoutConstraint.FromVisualFormat("V:|-10-[column]-10-|", NSLayoutFormatOptions.None, 
             null, new NSDictionary("column", column)));
         
-        TrainerModule.TryInvoke(window, callback, column);
+        ModuleDelegate.TryInvoke(window, callback, column);
         
         return column;
     }

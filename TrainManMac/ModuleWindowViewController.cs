@@ -7,7 +7,7 @@ using TrainManCore.Scripting.UI;
 
 namespace TrainMan;
 
-public class TrainerViewController: NSViewController, IWindow {
+public class ModuleWindowViewController: NSViewController, IWindow {
     public event Action<IWindow>? OnLoad;
     public string ClassName { get; }
     public NSWindow Window;
@@ -24,7 +24,7 @@ public class TrainerViewController: NSViewController, IWindow {
     private NSMenu? _menu;
     private List<Button> _buttons = [];
     
-    public TrainerViewController(bool isMainWindow, LuaTable luaContext, Module module) : base() {
+    public ModuleWindowViewController(bool isMainWindow, LuaTable luaContext, Module module) : base() {
         _luaContext = luaContext;
 
         if (luaContext["class"] is not LuaTable classTable) {
@@ -64,7 +64,7 @@ public class TrainerViewController: NSViewController, IWindow {
         Window.Center();
         
         Window.DidBecomeKey += (sender, e) => {
-            if (_isMainWindow && _module.TrainerDelegate is TrainerModule trainerModule) {
+            if (_isMainWindow && _module.Delegate is ModuleDelegate trainerModule) {
                 trainerModule.ActivateMenu();
             }
         };

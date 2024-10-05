@@ -255,7 +255,7 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
                 TranslatesAutoresizingMaskIntoConstraints = true,
                 Title = "",
                 BezelStyle = NSBezelStyle.RegularSquare,
-                State = _target.Modules.Find(m => m.ModulePath == _mods[(int)row].ModulePath) != null
+                State = _target.Modules.Find(m => m.Path == _mods[(int)row].Path) != null
                     ? NSCellStateValue.On : NSCellStateValue.Off
             };
             
@@ -343,7 +343,7 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
             _mods[row].Load(_target);
         } else {
             // Find the mod in the target's modules and unload it
-            var mod = _target.Modules.Find(m => m.ModulePath == _mods[row].ModulePath);
+            var mod = _target.Modules.Find(m => m.Path == _mods[row].Path);
             mod?.Exit();
         }
     }

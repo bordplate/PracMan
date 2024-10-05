@@ -5,7 +5,7 @@ public static class Application {
     public static List<Target.Target> ActiveTargets = [];
     
     public static void LoadModule(Target.Target target, string title, string moduleName) {
-        if (target.Modules.Find(module => module.ModuleIdentifier == moduleName && module.Title == title) != null) {
+        if (target.Modules.Find(module => module.Identifier == moduleName && module.Title == title) != null) {
             return;
         }
         
@@ -14,7 +14,7 @@ public static class Application {
     }
     
     public static void UnloadModule(Target.Target target, string title, string moduleName) {
-        target.Modules.Find(module => module.ModuleIdentifier == moduleName && module.Title == title)?.Exit();
+        target.Modules.Find(module => module.Identifier == moduleName && module.Title == title)?.Exit();
     }
     
     public static string GetModulesRoot() {

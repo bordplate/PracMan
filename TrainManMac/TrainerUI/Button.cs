@@ -28,7 +28,7 @@ public class Button: NSButton, IButton {
                 AlertStyle = NSAlertStyle.Critical,
                 InformativeText = exception.Message,
                 MessageText = "Error",
-            }.RunSheetModal(((TrainerViewController)Window).Window);
+            }.RunSheetModal(((ModuleWindowViewController)Window).Window);
         }
     }
 }

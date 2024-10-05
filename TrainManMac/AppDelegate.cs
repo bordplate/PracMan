@@ -137,8 +137,8 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
     }
 
     public void OnModuleLoad(Module module, Target target) {
-        var trainerModule = new TrainerModule();
-        module.TrainerDelegate = trainerModule;
+        var moduleDelegate = new ModuleDelegate();
+        module.Delegate = moduleDelegate;
         
         module.OnExit += () => {
             _modLoaders.TryGetValue(target, out var modLoaderWindow);
@@ -149,7 +149,7 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
             }
         };
 
-        trainerModule.AddMenu("Trainer", (menu) => {
+        moduleDelegate.AddMenu("Trainer", (menu) => {
             menu.AddItem("Mod loader...", () => {
                 OpenModLoader(target);
             });
@@ -159,11 +159,11 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
                     menu.AddSeparator();
                     
                     menu.AddItem("Input display", () => {
-                        if (trainerModule.InputDisplayViewController == null) {
-                            trainerModule.InputDisplayViewController = new InputDisplayViewController(inputs);
+                        if (moduleDelegate.InputDisplayViewController == null) {
+                            moduleDelegate.InputDisplayViewController = new InputDisplayViewController(inputs);
                         }
                                         
-                        trainerModule.InputDisplayViewController.Window.MakeKeyAndOrderFront(null);
+                        moduleDelegate.InputDisplayViewController.Window.MakeKeyAndOrderFront(null);
                     });
                 
                     var buttonCombosCheckItem = menu.AddCheckItem("Enable button combos", enabled => {
@@ -189,7 +189,7 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
             }
         });
         
-        trainerModule.ActivateMenu();
+        moduleDelegate.ActivateMenu();
     }
     
     public override void WillTerminate(NSNotification notification)

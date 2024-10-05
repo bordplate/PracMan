@@ -5,7 +5,7 @@ using TrainManCore.Scripting.UI;
 
 namespace TrainMan;
 
-public class TrainerModule: ITrainer {
+public class ModuleDelegate: IModule {
     public List<IWindow> Windows { get; set; } = [];
     private IWindow? _mainWindow;
     
@@ -17,7 +17,7 @@ public class TrainerModule: ITrainer {
     public NSMenuItem WindowsMenu;
     public NSMenuItem HelpMenu;
     
-    public TrainerModule() {
+    public ModuleDelegate() {
         MainMenu = new NSMenu();
 
         var appDelegate = (AppDelegate)NSApplication.SharedApplication.Delegate;
@@ -49,7 +49,7 @@ public class TrainerModule: ITrainer {
             throw new Exception("Main window already created.");
         }
         
-        var window = new TrainerViewController(isMainWindow, luaObject, module);
+        var window = new ModuleWindowViewController(isMainWindow, luaObject, module);
         
         if (isMainWindow) {
             _mainWindow = window;
@@ -117,8 +117,8 @@ public class TrainerModule: ITrainer {
                 MessageText = "An error occurred"
             };
             
-            if (window is TrainerViewController trainerViewController) {
-                alert.RunSheetModal(trainerViewController.Window);
+            if (window is ModuleWindowViewController viewController) {
+                alert.RunSheetModal(viewController.Window);
             } else {
                 alert.RunModal();
             }
@@ -135,8 +135,8 @@ public class TrainerModule: ITrainer {
                 MessageText = "An error occurred"
             };
             
-            if (window is TrainerViewController trainerViewController) {
-                alert.RunSheetModal(trainerViewController.Window);
+            if (window is ModuleWindowViewController viewController) {
+                alert.RunSheetModal(viewController.Window);
             } else {
                 alert.RunModal();
             }
@@ -153,8 +153,8 @@ public class TrainerModule: ITrainer {
                 MessageText = "An error occurred"
             };
             
-            if (window is TrainerViewController trainerViewController) {
-                alert.RunSheetModal(trainerViewController.Window);
+            if (window is ModuleWindowViewController viewController) {
+                alert.RunSheetModal(viewController.Window);
             } else {
                 alert.RunModal();
             }

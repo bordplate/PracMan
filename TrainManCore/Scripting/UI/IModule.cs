@@ -2,7 +2,7 @@ using NLua;
 
 namespace TrainManCore.Scripting.UI;
 
-public interface ITrainer {
+public interface IModule {
     public List<IWindow> Windows { get; protected set; }
     /// <summary>
     /// Creates a new window.
