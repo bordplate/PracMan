@@ -120,11 +120,20 @@ public class Module(string title, string path) {
         // Set package path to the runtime folder and the module's folder
         state.DoString($"package.path = package.path .. ';{Application.GetModulesRoot()}/Runtime/?.lua;{Path}/?.lua'", "set package path");
         
-        foreach (var (key, value) in LuaFunctions.Functions) {
+        var functions = new LuaFunctions(_target);
+        foreach (var (key, value) in functions.Functions) {
             state[key] = value;
         }
         
         state.DoString(File.ReadAllText(System.IO.Path.Combine(Application.GetModulesRoot(), "Runtime/runtime.lua")), "runtime.lua");
+        
+        // If the title exists in Runtime/Titles/{Title}, load and run all the Lua files in that directory
+        var titlePath = System.IO.Path.Combine(Application.GetModulesRoot(), "Runtime/Titles", Title);
+        if (Directory.Exists(titlePath)) {
+            foreach (var file in Directory.GetFiles(titlePath, "*.lua")) {
+                state.DoString(File.ReadAllText(file), file);
+            }
+        }
         
         state["Module"] = this;
         state["print"] = (string text) => {
@@ -147,7 +156,6 @@ public class Module(string title, string path) {
         state["UINT_MAX"] = uint.MaxValue;
         state["INT_MAX"] = int.MaxValue;
 
-        state["Ratchetron"] = _target;
         state["Target"] = _target;
         
         state["LoadModule"] = (string title, string moduleName) => {

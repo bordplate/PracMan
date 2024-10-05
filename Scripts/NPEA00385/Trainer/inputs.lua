@@ -29,17 +29,17 @@ function OnLoad()
     }
     
     buttonMaskSubID = Target:SubMemory(buttonsOffset, 4, function(value)
-        buttons = bytestouint(value)
+        buttons = BytesToUInt(value)
     end)
     
     analogRSubID = Target:SubMemory(analogROffset, 8, function(value)
-        analogRX = bytestofloat(value, 4)
-        analogRY = bytestofloat(value)
+        analogRX = BytesToFloat(value, 4)
+        analogRY = BytesToFloat(value)
     end)
     
     analogLSubID = Target:SubMemory(analogLOffset, 8, function(value)
-        analogLX = bytestofloat(value, 4)
-        analogLY = bytestofloat(value)
+        analogLX = BytesToFloat(value, 4)
+        analogLY = BytesToFloat(value)
     end)
 end
 
