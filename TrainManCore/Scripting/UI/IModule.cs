@@ -14,5 +14,4 @@ public interface IModule {
     public IWindow CreateWindow(Module module, LuaTable luaObject, bool isMainWindow = false);
     public IMenu AddMenu(string title, Action<IMenu> callback);
     public void CloseAllWindows();
-    void Alert(string text);
 }

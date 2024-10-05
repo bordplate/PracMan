@@ -226,6 +226,8 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
             Title = "Add ZIP...",
         };
         
+        addZipButton.Action = new ObjCRuntime.Selector("addZipButtonClicked:");
+        
         buttonsStackView.AddArrangedSubview(scriptingButton);
         buttonsStackView.AddArrangedSubview(consoleButton);
         buttonsStackView.AddArrangedSubview(addZipButton);
@@ -346,5 +348,23 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
             var mod = _target.Modules.Find(m => m.Path == _mods[row].Path);
             mod?.Exit();
         }
+    }
+    
+    [Export("addZipButtonClicked:")]
+    public void AddZipButtonClicked(NSObject sender) {
+        var openPanel = new NSOpenPanel {
+            CanChooseFiles = true,
+            CanChooseDirectories = false,
+            AllowsMultipleSelection = false,
+            AllowedFileTypes = ["zip"],
+        };
+        
+        openPanel.BeginSheet(Window, result => {
+            if (result == 1) {
+                var path = openPanel.Url.Path!;
+                
+                Application.InstallModuleFromZip(_target.TitleId, path);
+            }
+        });
     }
 }

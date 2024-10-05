@@ -38,30 +38,6 @@ public class Module(string title, string path) {
         
         Application.Delegate?.OnModuleLoad(this, _target);
         
-        var entry = Settings.Get<string>("General.entry");
-        
-        if (entry != null) {
-            var entryFile = File.ReadAllText(System.IO.Path.Combine(Path, entry));
-        
-            if (entryFile == null) {
-                throw new ScriptException($"Entry point `{entry}` specified in module config, but the file was not found.");
-            }
-
-            try {
-                SetupState(_state);
-            } catch (ParseException exception) {
-                Exit();
-                return;
-            }
-
-            try {
-                _state.DoString(entryFile, entry);
-                (_state["OnLoad"] as LuaFunction)?.Call();
-            } catch (LuaScriptException exception) {
-                throw new ScriptException(exception.Message);
-            }
-        }
-
         var patches = Settings.GetTableForSection("Patches");
         if (patches != null) {
             foreach (var addressString in patches.Keys) {
@@ -87,6 +63,30 @@ public class Module(string title, string path) {
                         _target.WriteMemory(address + (uint)i, (uint)length, chunk);
                     }
                 }
+            }
+        }
+        
+        var entry = Settings.Get<string>("General.entry");
+        
+        if (entry != null) {
+            var entryFile = File.ReadAllText(System.IO.Path.Combine(Path, entry));
+        
+            if (entryFile == null) {
+                throw new ScriptException($"Entry point `{entry}` specified in module config, but the file was not found.");
+            }
+
+            try {
+                SetupState(_state);
+            } catch (ParseException exception) {
+                Exit();
+                return;
+            }
+
+            try {
+                _state.DoString(entryFile, entry);
+                (_state["OnLoad"] as LuaFunction)?.Call();
+            } catch (LuaScriptException exception) {
+                throw new ScriptException(exception.Message);
             }
         }
         
@@ -138,7 +138,7 @@ public class Module(string title, string path) {
             if (_target.CanInlineNotify()) {
                 _target.Notify(text);
             } else {
-                Delegate.Alert(text);
+                Application.Delegate?.Alert(Settings.Get("General.name", Identifier)!, text);
             }
         };
         

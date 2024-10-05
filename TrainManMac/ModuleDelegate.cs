@@ -98,15 +98,6 @@ public class ModuleDelegate: IModule {
         }
     }
 
-    public void Alert(string text) {
-        var alert = new NSAlert {
-            AlertStyle = NSAlertStyle.Informational,
-            InformativeText = text
-        };
-        
-        alert.RunModal();
-    }
-
     public static void TryInvoke(IWindow? window, LuaFunction action, params object[] args) {
         try {
             action.Call(args);

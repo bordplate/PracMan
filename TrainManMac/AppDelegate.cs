@@ -251,6 +251,14 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
         
         moduleDelegate.ActivateMenu();
     }
+
+    public void Alert(string title, string message) {
+        new NSAlert {
+            AlertStyle = NSAlertStyle.Informational,
+            InformativeText = message,
+            MessageText = title
+        }.RunModal();
+    }
     
     public void ConfirmDialog(string title, string message, Action<bool> callback) {
         var alert = new NSAlert {
