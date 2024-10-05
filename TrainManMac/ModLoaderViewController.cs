@@ -284,7 +284,7 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
                 Bordered = false,
                 Editable = false,
                 Selectable = false,
-                StringValue = mod.Settings.Get("General.name", "N/A")!,
+                StringValue = mod.Settings.Get("General.name", mod.Identifier)!,
             };
             
             cell.AddSubview(textField);

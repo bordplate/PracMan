@@ -1,3 +1,5 @@
+using Nett.Parser;
+
 namespace TrainManCore.Scripting;
 
 public static class Application {
@@ -39,7 +41,12 @@ public static class Application {
             List<Module> modules = [];
             
             foreach (var dir in dirs) {
-                modules.Add(new Module(title, dir));
+                try {
+                    var module = new Module(title, dir);
+                    modules.Add(module);
+                } catch (ParseException exception) {
+                    Console.Error.WriteLine($"Could not parse config file for module {dir}: {exception.Message}");
+                }
             }
         
             return modules;

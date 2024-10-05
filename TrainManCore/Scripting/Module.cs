@@ -1,5 +1,6 @@
 using System.Globalization;
 using Nett;
+using Nett.Parser;
 using NLua;
 using NLua.Exceptions;
 using TrainManCore.Scripting.Exceptions;
@@ -19,6 +20,8 @@ public class Module(string title, string path) {
 
     private Target.Target? _target;
     private Inputs? _inputs;
+    
+    private Settings? _userSettings;
 
     private readonly Lua _state = new();
 
@@ -26,6 +29,13 @@ public class Module(string title, string path) {
 
     public void Load(Target.Target target) {
         _target = target;
+
+        _userSettings = GetUserSettings();
+        if (_userSettings == null) {
+            Exit();
+            return;
+        }
+        
         Application.Delegate?.OnModuleLoad(this, _target);
         
         var entry = Settings.Get<string>("General.entry");
@@ -34,10 +44,15 @@ public class Module(string title, string path) {
             var entryFile = File.ReadAllText(System.IO.Path.Combine(Path, entry));
         
             if (entryFile == null) {
-                throw new ScriptException("Entry point file not found.");
+                throw new ScriptException($"Entry point `{entry}` specified in module config, but the file was not found.");
             }
 
-            SetupState(_state);
+            try {
+                SetupState(_state);
+            } catch (ParseException exception) {
+                Exit();
+                return;
+            }
 
             try {
                 _state.DoString(entryFile, entry);
@@ -76,13 +91,12 @@ public class Module(string title, string path) {
         }
         
         _target.Modules.Add(this);
-        
         IsLoaded = true;
     }
     
     public void Exit() {
         IsLoaded = false;
-        _target?.Modules.Remove(this);
+        if (_target != null && _target.Modules.Contains(this)) _target.Modules.Remove(this);
         
         (_state["OnUnload"] as LuaFunction)?.Call();
         
@@ -127,9 +141,9 @@ public class Module(string title, string path) {
                 Delegate.Alert(text);
             }
         };
-
-        state["Settings"] = new Settings(System.IO.Path.Combine(Path, "settings.user.toml"), true);
         
+        state["Settings"] = _userSettings;
+
         state["UINT_MAX"] = uint.MaxValue;
         state["INT_MAX"] = int.MaxValue;
 
@@ -159,6 +173,23 @@ public class Module(string title, string path) {
         };
         
         return window;
+    }
+    
+    private Settings? GetUserSettings() {
+        Settings? userSettings = null;
+        
+        try {
+            userSettings = new Settings(System.IO.Path.Combine(Path, "settings.user.toml"), true);
+        } catch (ParseException exception) {
+            Application.Delegate?.ConfirmDialog("Delete settings file?", $"Your settings for {Settings.Get("General.name", Identifier)} could not be parsed. Do you want to reset these settings?", (confirmed) => {
+                if (confirmed) {
+                    File.Delete(System.IO.Path.Combine(Path, "settings.user.toml"));
+                    userSettings = new Settings(System.IO.Path.Combine(Path, "settings.user.toml"), true);
+                }
+            });
+        }
+
+        return userSettings;
     }
     
     public Inputs? LoadInputs() {

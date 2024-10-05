@@ -153,7 +153,7 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
             menu.AddItem("Mod loader...", () => {
                 OpenModLoader(target);
             });
-                            
+            
             if (module.Settings.Get<string>("General.inputs_controller", "") != "") {
                 if (module.LoadInputs() is { } inputs) {
                     menu.AddSeparator();
@@ -190,6 +190,21 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
         });
         
         moduleDelegate.ActivateMenu();
+    }
+    
+    public void ConfirmDialog(string title, string message, Action<bool> callback) {
+        var alert = new NSAlert {
+            AlertStyle = NSAlertStyle.Informational,
+            InformativeText = message,
+            MessageText = title
+        };
+        
+        alert.AddButton("OK");
+        alert.AddButton("Cancel");
+        
+        var result = alert.RunModal();
+        
+        callback(result == 1000);
     }
     
     public override void WillTerminate(NSNotification notification)
