@@ -144,7 +144,12 @@ public static class Application {
                 }
 
                 if (address.Contains("0x")) {
-                    config.Set($"Patches.{address}", value);
+                    if (value.Contains("0x")) {
+                        var uintValue = Convert.ToInt32(value, 16);
+                        config.Set($"Patches.{address}", uintValue);
+                    } else {
+                        config.Set($"Patches.{address}", value);
+                    }
                 }
             }
         }
