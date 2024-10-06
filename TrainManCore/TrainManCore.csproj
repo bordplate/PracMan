@@ -8,6 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="FluentFTP" Version="51.1.0" />
       <PackageReference Include="Nett" Version="0.15.0" />
       <PackageReference Include="NLua" Version="1.7.3" />
     </ItemGroup>

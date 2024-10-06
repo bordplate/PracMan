@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using FluentFTP;
 using TrainManCore.Exceptions;
 using TrainManCore.Scripting;
 
@@ -32,9 +33,66 @@ public class Ratchetron(string ip) : Target(ip) {
         return "192.168.1.100";
     }
 
+    private void EnsureRatchetronEnabledOnTarget() {
+        var httpClient = new HttpClient();
+        httpClient.Timeout = TimeSpan.FromSeconds(5);
+        
+        var response = httpClient.GetAsync($"http://{_ip}/home.ps3mapi").Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
+
+        if (responseString.Contains("ratchetron_server.sprx")) {
+            return;
+        }
+
+        var ftpClient = new FtpClient(_ip);
+        ftpClient.AutoConnect();
+
+        if (!ftpClient.IsConnected) {
+            throw new TargetException("Failed to connect to PS3 via FTP. Make sure FTP is enabled on port 21 in WebMAN.");
+        }
+        
+        ftpClient.UploadFile($"Scripts/SPRX/ratchetron_server.sprx", "/dev_hdd0/tmp/ratchetron_server.sprx");
+        ftpClient.Disconnect();
+        
+        var loadResponse = httpClient.GetAsync($"http://{ip}/vshplugin.ps3mapi?prx=%2Fdev_hdd0%2Ftmp%2Fratchetron_server.sprx&load_slot=6").Result;
+        _ = loadResponse.Content.ReadAsStringAsync().Result;
+    }
+
     public override bool Start(AttachedCallback callback) {
-        var connectionThread = new Thread(() => { 
+        var connectionThread = new Thread(() => {
             try {
+                try {
+                    EnsureRatchetronEnabledOnTarget();
+                }
+                catch (AggregateException ex) {
+                    ex.Handle(x => {
+                        if (x is TaskCanceledException) {
+                            ;
+                            Application.Delegate?.RunOnMainThread(() => {
+                                callback(false,
+                                    "Timed out trying to connect to PS3. Check that the IP address is correct.");
+                            });
+                            return true;
+                        }
+
+                        if (x is HttpRequestException) {
+                            Application.Delegate?.RunOnMainThread(() => {
+                                callback(false,
+                                    "Failed to connect to WebMAN. Check that the IP address is correct and that WebMAN is running on your PS3.");
+                            });
+                        }
+
+                        return false;
+                    });
+                    return;
+                }
+                catch (TargetException exception) {
+                    Application.Delegate?.RunOnMainThread(() => {
+                        callback(false, exception.Message);
+                    });
+                    return;
+                }
+                
                 _client = new TcpClient();
 
                 if (!_client.ConnectAsync(_ip, Port).Wait(5000)) {
@@ -64,6 +122,8 @@ public class Ratchetron(string ip) : Target(ip) {
                     _pid = GetCurrentPID();
                     
                     Application.ActiveTargets.Add(this);
+
+                    OpenDataChannel();
                     
                     Application.Delegate?.RunOnMainThread(() => {
                         callback(true, null);
@@ -71,17 +131,13 @@ public class Ratchetron(string ip) : Target(ip) {
                 }
             } catch (SocketException) {
                 Application.Delegate?.RunOnMainThread(() => {
-                    callback(false, "Socket error: Failed to connect to PS3");
+                    callback(false, "Socket error: Failed to connect to PS3.");
                 });
-            } catch (Exception) {
+            } catch (Exception e) {
                 Application.Delegate?.RunOnMainThread(() => {
-                    callback(false, "Unknown error: Failed to connect to PS3");
+                    callback(false, $"Unknown error: Failed to connect to PS3\n\n{e.Message}");
                 });
             }
-            
-            Application.Delegate?.RunOnMainThread(() => {
-                callback(false, "Mega unknown error: Failed to connect to PS3");
-            });
         });
 
         connectionThread.Start();
@@ -251,7 +307,9 @@ public class Ratchetron(string ip) : Target(ip) {
                         if (_memSubTickUpdates.ContainsKey((int)memSubID) &&
                             _memSubTickUpdates[(int)memSubID] != tickUpdated) {
                             _memSubTickUpdates[(int)memSubID] = tickUpdated;
-                            _memSubCallbacks[(int)memSubID](value);
+                            Application.Delegate?.RunOnMainThread(() => {
+                                _memSubCallbacks[(int)memSubID](value);
+                            });
                         }
 
                         break;
@@ -275,9 +333,7 @@ public class Ratchetron(string ip) : Target(ip) {
             }
             catch (SocketException) {
                 if (port++ > 5000) {
-                    // FIXME: Throw exception instead
-                    //MessageBox.Show("Tried to open data connection on all ports between 4000 and 5000, but that failed. Did you deny RaCMAN firewall access?");
-                    return;
+                    throw new TargetException("Tried to open data connection on all ports between 4000 and 5000, but that failed. Did you deny RaCMAN firewall access?");
                 }
             }
         }
@@ -302,7 +358,7 @@ public class Ratchetron(string ip) : Target(ip) {
 
                 //this.udpClient.Send(new byte[] { 0x01 }, 1, remoteEndpoint);
 
-                var dataThread = new Thread(this.DataChannelReceive);
+                var dataThread = new Thread(DataChannelReceive);
                 dataThread.Start();
             }
             else if (returnValue[0] == 2) {
