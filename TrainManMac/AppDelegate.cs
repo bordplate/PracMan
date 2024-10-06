@@ -257,6 +257,13 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
                 }
             }
         });
+
+        moduleDelegate.AddMenu("Debug", menu => {
+            menu.AddItem("Console", OpenConsole);
+            menu.AddItem("Open data folder...", () => {
+                NSWorkspace.SharedWorkspace.OpenUrl(new NSUrl($"{Directory.GetCurrentDirectory()}", true));
+            });
+        });
         
         moduleDelegate.ActivateMenu();
     }
