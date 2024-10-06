@@ -20,6 +20,12 @@
         <!-- Define the folders/files you want to copy -->
         <ScriptsFolder Include="..\Scripts\**\*" />
         <SkinsFolder Include="..\controllerskins\**\*" />
+        <ScriptsFolder Update="..\Scripts\Runtime\ScriptWindow.lua">
+          <Link>Runtime\ScriptWindow.lua</Link>
+        </ScriptsFolder>
+        <ScriptsFolder Update="..\Scripts\Runtime\config.toml">
+          <Link>Runtime\config.toml</Link>
+        </ScriptsFolder>
     </ItemGroup>
 
     <Target Name="CopyFolderStructureToAppBundle" AfterTargets="Build">

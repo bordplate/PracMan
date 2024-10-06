@@ -21,6 +21,10 @@ public class TextField: NSTextField, ITextField {
 
         RefusesFirstResponder = true;
     }
+
+    public string GetText() {
+        return StringValue;
+    }
     
     [Export("textFieldDidChange:")]
     public void TextFieldDidChange(NSObject sender) {

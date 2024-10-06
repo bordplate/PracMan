@@ -66,6 +66,13 @@ public class Module(string title, string path) {
             }
         }
         
+        try {
+            SetupState(_state);
+        } catch (ParseException exception) {
+            Exit();
+            return;
+        }
+        
         var entry = Settings.Get<string>("General.entry");
         
         if (entry != null) {
@@ -76,16 +83,10 @@ public class Module(string title, string path) {
             }
 
             try {
-                SetupState(_state);
-            } catch (ParseException exception) {
-                Exit();
-                return;
-            }
-
-            try {
                 _state.DoString(entryFile, entry);
                 (_state["OnLoad"] as LuaFunction)?.Call();
             } catch (LuaScriptException exception) {
+                Exit();
                 throw new ScriptException(exception.Message);
             }
         }
@@ -125,16 +126,6 @@ public class Module(string title, string path) {
             state[key] = value;
         }
         
-        state.DoString(File.ReadAllText(System.IO.Path.Combine(Application.GetModulesRoot(), "Runtime/runtime.lua")), "runtime.lua");
-        
-        // If the title exists in Runtime/Titles/{Title}, load and run all the Lua files in that directory
-        var titlePath = System.IO.Path.Combine(Application.GetModulesRoot(), "Runtime/Titles", Title);
-        if (Directory.Exists(titlePath)) {
-            foreach (var file in Directory.GetFiles(titlePath, "*.lua")) {
-                state.DoString(File.ReadAllText(file), file);
-            }
-        }
-        
         state["Module"] = this;
         state["print"] = (string text) => {
             Console.WriteLine($"[{Identifier}] {text}");
@@ -150,6 +141,9 @@ public class Module(string title, string path) {
                 Application.Delegate?.Alert(Settings.Get("General.name", Identifier)!, text);
             }
         };
+
+        state["Execute"] = Run;
+        state["LoadFileFromDialog"] = Application.Delegate!.LoadFileFromDialog;
         
         state["Settings"] = _userSettings;
 
@@ -164,6 +158,24 @@ public class Module(string title, string path) {
         state["SetTitleID"] = (string titleId) => {
             _target.TitleId = titleId;
         };
+        
+        state.DoString(File.ReadAllText(System.IO.Path.Combine(Application.GetModulesRoot(), "Runtime/runtime.lua")), "runtime.lua");
+        
+        // If the title exists in Runtime/Titles/{Title}, load and run all the Lua files in that directory
+        var titlePath = System.IO.Path.Combine(Application.GetModulesRoot(), "Runtime/Titles", Title);
+        if (Directory.Exists(titlePath)) {
+            foreach (var file in Directory.GetFiles(titlePath, "*.lua")) {
+                state.DoString(File.ReadAllText(file), file);
+            }
+        }
+    }
+
+    public void Run(string code) {
+        try {
+            _state.DoString(code, "Dynamic code");
+        } catch (LuaScriptException exception) {
+            Console.Error.WriteLine(exception.Message);
+        }
     }
 
     public IWindow CreateWindow(LuaTable luaObject, bool isMainWindow = false) {

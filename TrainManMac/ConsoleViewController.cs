@@ -69,8 +69,9 @@ public class ConsoleViewController : NSViewController {
 
     private void RedirectConsoleOutput() {
         var outputWriter = new ConsoleWriter(_textView);
+        var errorWriter = new ConsoleWriter(_textView, true);
         Console.SetOut(outputWriter);
-        Console.SetError(outputWriter);
+        Console.SetError(errorWriter);
     }
 
     private class ConsoleWriter : TextWriter {

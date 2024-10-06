@@ -24,6 +24,15 @@ public abstract class Container(IWindow window) : NSStackView, IContainer {
         
         return textField;
     }
+    
+    public ITextArea AddTextArea(int rows) {
+        var textArea = new TextArea(Window, rows);
+        AddArrangedSubview(textArea);
+        
+        ConstrainElement(textArea);
+        
+        return textArea;
+    }
 
     public IButton AddButton(string title, LuaFunction callback) {
         var button = new Button(Window, title, callback);

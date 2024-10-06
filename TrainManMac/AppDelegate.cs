@@ -263,6 +263,9 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
             menu.AddItem("Open data folder...", () => {
                 NSWorkspace.SharedWorkspace.OpenUrl(new NSUrl($"{Directory.GetCurrentDirectory()}", true));
             });
+            menu.AddItem("Run script...", () => {
+                module.Run("_scriptWindow:Show()");
+            });
         });
         
         moduleDelegate.ActivateMenu();
@@ -289,6 +292,21 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
         var result = alert.RunModal();
         
         callback(result == 1000);
+    }
+
+    public string LoadFileFromDialog() {
+        var dialog = NSOpenPanel.OpenPanel;
+        dialog.CanChooseFiles = true;
+        dialog.CanChooseDirectories = false;
+        dialog.AllowsMultipleSelection = false;
+        
+        if (dialog.RunModal() == 1) {
+            if (dialog.Url.Path is { } path) {
+                return File.ReadAllText(path);
+            }
+        }
+        
+        return "";
     }
     
     public override void WillTerminate(NSNotification notification)

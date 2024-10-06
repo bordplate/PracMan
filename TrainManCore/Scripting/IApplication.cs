@@ -6,4 +6,5 @@ public interface IApplication {
     public void RunOnMainThread(Action action);
     public void Alert(string title, string message);
     public void ConfirmDialog(string title, string message, Action<bool> callback);
+    public string LoadFileFromDialog();
 }

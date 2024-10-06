@@ -41,9 +41,9 @@ public class ModuleDelegate: IModule {
     }
 
     public IWindow CreateWindow(Module module, LuaTable luaObject, bool isMainWindow = false) {
-        if (_mainWindow == null && !isMainWindow) {
-            throw new Exception("Main window must be created first.");
-        }
+        // if (_mainWindow == null && !isMainWindow) {
+        //     throw new Exception("Main window must be created first.");
+        // }
 
         if (isMainWindow && _mainWindow != null) {
             throw new Exception("Main window already created.");
