@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net8.0-macos</TargetFramework>
+        <OutputType>Exe</OutputType>
+        <Nullable>enable</Nullable>
+        <WarningsAsErrors>Nullable</WarningsAsErrors>
+        <ImplicitUsings>true</ImplicitUsings>
+        <SupportedOSPlatformVersion>10.15</SupportedOSPlatformVersion>
+        <RootNamespace>PracMan</RootNamespace>
+        <AssemblyName>PracMan</AssemblyName>
+    </PropertyGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\PracManCore\PracManCore.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+      <PackageReference Include="SparkleSharp" Version="1.0.0-rc8" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Define the folders/files you want to copy -->
+        <ScriptsFolder Include="..\Scripts\**\*" />
+        <SkinsFolder Include="..\controllerskins\**\*" />
+        <ScriptsFolder Update="..\Scripts\Runtime\ScriptWindow.lua">
+          <Link>Runtime\ScriptWindow.lua</Link>
+        </ScriptsFolder>
+        <ScriptsFolder Update="..\Scripts\Runtime\config.toml">
+          <Link>Runtime\config.toml</Link>
+        </ScriptsFolder>
+        <ScriptsFolder Remove="..\Scripts\NPEA00385\Test\**" />
+    </ItemGroup>
+
+    <Target Name="CopyFolderStructureToAppBundle" AfterTargets="Build">
+        <!-- Define where the Resources folder is located in the app bundle -->
+        <PropertyGroup>
+            <AppBundleResourcesFolder>$(OutputPath)$(AssemblyName).app/Contents/Resources/</AppBundleResourcesFolder>
+        </PropertyGroup>
+
+        <!-- Ensure the destination folders are created and copy files with directory structure -->
+        <Copy SourceFiles="@(ScriptsFolder)"
+              DestinationFiles="@(ScriptsFolder->'$(AppBundleResourcesFolder)/User/Scripts/%(RecursiveDir)%(Filename)%(Extension)')" />
+        <Copy SourceFiles="@(SkinsFolder)"
+              DestinationFiles="@(SkinsFolder->'$(AppBundleResourcesFolder)/User/controllerskins/%(RecursiveDir)%(Filename)%(Extension)')" />
+    </Target>
+
+</Project>
