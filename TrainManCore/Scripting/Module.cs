@@ -137,7 +137,7 @@ public class Module(string title, string path) {
         
         state["Module"] = this;
         state["print"] = (string text) => {
-            Console.WriteLine(text);
+            Console.WriteLine($"[{Identifier}] {text}");
         };
         state["Exit"] = Exit;
 

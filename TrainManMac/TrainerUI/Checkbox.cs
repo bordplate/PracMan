@@ -27,6 +27,7 @@ public class Checkbox: NSButton, ICheckbox {
         try {
             _callback.Call(IsChecked());
         } catch (LuaScriptException exception) {
+            Console.Error.WriteLine(exception.Message);
             new NSAlert {
                 AlertStyle = NSAlertStyle.Critical,
                 InformativeText = exception.Message,

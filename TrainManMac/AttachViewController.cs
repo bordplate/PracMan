@@ -149,6 +149,7 @@ public class AttachViewController: NSViewController {
                             module.Load(target);
                         }
                         catch (ScriptException exception) {
+                            Console.Error.WriteLine(exception.Message);
                             new NSAlert {
                                 AlertStyle = NSAlertStyle.Critical,
                                 InformativeText = exception.Message,

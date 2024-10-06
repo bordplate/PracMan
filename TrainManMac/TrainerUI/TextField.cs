@@ -27,6 +27,7 @@ public class TextField: NSTextField, ITextField {
         try {
             _callback.Call(this.StringValue);
         } catch (LuaScriptException exception) {
+            Console.Error.WriteLine(exception.Message);
             new NSAlert {
                 AlertStyle = NSAlertStyle.Critical,
                 InformativeText = exception.Message,

@@ -28,6 +28,7 @@ public class Dropdown: NSPopUpButton, IDropdown {
         try {
             _callback.Call(1, _items.Values.First());
         } catch (LuaScriptException exception) {
+            Console.Error.WriteLine(exception.Message);
             new NSAlert {
                 AlertStyle = NSAlertStyle.Critical,
                 InformativeText = exception.Message,
@@ -78,6 +79,7 @@ public class Dropdown: NSPopUpButton, IDropdown {
         try {
             _callback.Call(index, _items[index]);
         } catch (LuaScriptException exception) {
+            Console.Error.WriteLine(exception.Message);
             new NSAlert {
                 AlertStyle = NSAlertStyle.Critical,
                 InformativeText = exception.Message,
@@ -94,6 +96,7 @@ public class Dropdown: NSPopUpButton, IDropdown {
         try {
             _callback.Call(keys[IndexOfSelectedItem - 1], values[IndexOfSelectedItem - 1]);
         } catch (LuaScriptException exception) {
+            Console.Error.WriteLine(exception.Message);
             new NSAlert {
                 AlertStyle = NSAlertStyle.Critical,
                 InformativeText = exception.Message,

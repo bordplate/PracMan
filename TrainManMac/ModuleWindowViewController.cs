@@ -77,6 +77,7 @@ public class ModuleWindowViewController: NSViewController, IWindow {
         try {
             (_luaContext["OnLoad"] as LuaFunction)?.Call([_luaContext]);
         } catch (LuaScriptException exception) {
+            Console.Error.WriteLine(exception.Message);
             new NSAlert {
                 AlertStyle = NSAlertStyle.Critical,
                 InformativeText = exception.Message,

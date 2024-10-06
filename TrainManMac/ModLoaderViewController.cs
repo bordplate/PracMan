@@ -226,6 +226,7 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
             Title = "Add ZIP...",
         };
         
+        consoleButton.Action = new ObjCRuntime.Selector("consoleButtonClicked:");
         addZipButton.Action = new ObjCRuntime.Selector("addZipButtonClicked:");
         
         buttonsStackView.AddArrangedSubview(scriptingButton);
@@ -348,6 +349,11 @@ public class ModLoaderViewController: NSViewController, INSTableViewDataSource, 
             var mod = _target.Modules.Find(m => m.Path == _mods[row].Path);
             mod?.Exit();
         }
+    }
+    
+    [Export("consoleButtonClicked:")]
+    public void ConsoleButtonClicked(NSObject sender) {
+        ((AppDelegate)NSApplication.SharedApplication.Delegate).OpenConsole();
     }
     
     [Export("addZipButtonClicked:")]

@@ -24,6 +24,7 @@ public class Button: NSButton, IButton {
         try {
             ((IButton)this).Activate();
         } catch (LuaScriptException exception) {
+            Console.Error.WriteLine(exception.Message);
             new NSAlert {
                 AlertStyle = NSAlertStyle.Critical,
                 InformativeText = exception.Message,

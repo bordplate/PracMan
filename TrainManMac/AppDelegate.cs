@@ -8,6 +8,7 @@ namespace TrainMan;
 [Register("AppDelegate")]
 public class AppDelegate : NSApplicationDelegate, IApplication {
     public AttachViewController AttachViewController = new();
+    private ConsoleViewController? _consoleViewController;
 
     public NSMenu MainMenu = new();
     public NSMenuItem WindowsMenu;
@@ -194,6 +195,14 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
         }
 
         _modLoaders[target].Window.MakeKeyAndOrderFront(null);
+    }
+    
+    public void OpenConsole() {
+        if (_consoleViewController == null) {
+            _consoleViewController = new ConsoleViewController();
+        }
+
+        _consoleViewController.Window.MakeKeyAndOrderFront(null);
     }
 
     public void OnModuleLoad(Module module, Target target) {

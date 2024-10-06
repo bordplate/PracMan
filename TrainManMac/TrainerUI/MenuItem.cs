@@ -47,6 +47,7 @@ public class MenuItem: NSMenuItem, IMenuItem {
             try {
                 _checkCallback?.Invoke(State == NSCellStateValue.On);
             } catch (LuaScriptException exception) {
+                Console.Error.WriteLine(exception.Message);
                 new NSAlert {
                     AlertStyle = NSAlertStyle.Critical,
                     InformativeText = exception.Message,
@@ -60,6 +61,7 @@ public class MenuItem: NSMenuItem, IMenuItem {
         try {
             _callback?.Invoke();
         } catch (LuaScriptException exception) {
+            Console.Error.WriteLine(exception.Message);
             new NSAlert {
                 AlertStyle = NSAlertStyle.Critical,
                 InformativeText = exception.Message,
