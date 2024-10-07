@@ -1,4 +1,5 @@
 using System.Reflection;
+using PracManCore;
 using PracManCore.Scripting;
 using PracManCore.Scripting.Exceptions;
 using PracManCore.Target;
@@ -10,14 +11,25 @@ public class AttachViewController: NSViewController {
     
     private readonly List<Type> _targets = [];
     private Type _targetType = null!;
-
+    
+    private readonly NSSegmentedControl _segmentedControl;
     private readonly AttachComboBox _targetComboBox;
     private readonly NSButton _attachButton;
+    private readonly NSProgressIndicator _progressIndicator;
     
     public AttachViewController() : base(null, null) {
         _targets.Add(typeof(Ratchetron));
         _targets.Add(typeof(RPCS3));
+        #if DEBUG
         _targets.Add(typeof(DummyTarget));
+        #endif
+        
+        _segmentedControl = new NSSegmentedControl {
+            SegmentStyle = NSSegmentStyle.TexturedRounded,
+            TranslatesAutoresizingMaskIntoConstraints = false,
+            SegmentCount = (nint)_targets.Count,
+            SelectedSegment = (nint)0
+        };
         
         _targetComboBox = new AttachComboBox {
             TranslatesAutoresizingMaskIntoConstraints = false,
@@ -31,6 +43,14 @@ public class AttachViewController: NSViewController {
             TranslatesAutoresizingMaskIntoConstraints = false,
             Action = new ObjCRuntime.Selector("attachButtonClicked:"),
             Target = this
+        };
+
+        _progressIndicator = new NSProgressIndicator {
+            Indeterminate = true,
+            Style = NSProgressIndicatorStyle.Spinning,
+            ControlSize = NSControlSize.Small,
+            TranslatesAutoresizingMaskIntoConstraints = false,
+            Hidden = true,
         };
         
         Window = new NSWindow(
@@ -60,30 +80,29 @@ public class AttachViewController: NSViewController {
         // Set window to minimum size so auto layout resizes it
         View.SetFrameSize(new CGSize(0, 0));
         
-        var segmentedControl = new NSSegmentedControl {
-            SegmentStyle = NSSegmentStyle.TexturedRounded,
-            TranslatesAutoresizingMaskIntoConstraints = false,
-            SegmentCount = (nint)_targets.Count,
-            SelectedSegment = (nint)0
-        };
-        
         for (var i = 0; i < _targets.Count; i++) {
             var targetType = _targets[i];
             
-            segmentedControl.SetLabel(InvokeStaticNameMethod(targetType), (nint)i);
+            _segmentedControl.SetLabel(InvokeStaticNameMethod(targetType), (nint)i);
         }
         
-        segmentedControl.Action = new ObjCRuntime.Selector("segmentedControlClicked:");
-        segmentedControl.Target = this;
+        _segmentedControl.Action = new ObjCRuntime.Selector("segmentedControlClicked:");
+        _segmentedControl.Target = this;
         
-        View.AddSubview(segmentedControl);
-        
+        View.AddSubview(_segmentedControl);
         View.AddSubview(_targetComboBox);
         View.AddSubview(_attachButton);
+        View.AddSubview(_progressIndicator);
         
-        var views = new NSDictionary("comboBox", _targetComboBox, "button", _attachButton, "segmentedControl", segmentedControl);
+        var views = new NSDictionary(
+            "comboBox", _targetComboBox, 
+            "button", _attachButton, 
+            "segmentedControl", _segmentedControl, 
+            "progressIndicator", _progressIndicator
+        );
+        
         View.AddConstraints(NSLayoutConstraint.FromVisualFormat("H:|-50-[segmentedControl]-50-|", NSLayoutFormatOptions.AlignAllTop, null, views));
-        View.AddConstraints(NSLayoutConstraint.FromVisualFormat("H:|-50-[comboBox(>=150)]-10-[button]-50-|", NSLayoutFormatOptions.AlignAllTop, null, views));
+        View.AddConstraints(NSLayoutConstraint.FromVisualFormat("H:|-50-[comboBox(>=150)]-10-[button]-[progressIndicator]-20-|", NSLayoutFormatOptions.AlignAllTop, null, views));
         View.AddConstraints(NSLayoutConstraint.FromVisualFormat("V:|-20-[segmentedControl]-20-[comboBox]-50-|", NSLayoutFormatOptions.None, null, views));
         
         SetTargetType(_targets[0]);
@@ -92,9 +111,10 @@ public class AttachViewController: NSViewController {
     public void SetTargetType(Type targetType) {
         _targetType = targetType;
 
-        _targetComboBox.Clear();
+        _targetComboBox.StringValue = Settings.Default.Get($"Target.{_targetType.Name}.LastAddress", "")!;
         _targetComboBox.PlaceholderString = InvokeStaticPlaceholderAddressMethod(targetType);
         
+        _targetComboBox.SetRecents(GetRecentItems(_targetType.Name));
         InvokeStaticDiscoverTargetsMethod(targetType, (discoveredTargets) => {
             _targetComboBox.SetDiscovered(discoveredTargets);
         });
@@ -104,8 +124,6 @@ public class AttachViewController: NSViewController {
         var appDelegate = (AppDelegate)NSApplication.SharedApplication.Delegate;
         
         var targetAddress = _targetComboBox.StringValue;
-
-        _attachButton.Title = "Cancel";
 
         var alert = new NSAlert {
             AlertStyle = NSAlertStyle.Critical
@@ -117,23 +135,36 @@ public class AttachViewController: NSViewController {
             
             alert.RunSheetModal(Window);
             
-            _attachButton.Title = "Attach";
-            
             return;
         }
         
         var target = CreateTargetInstance(targetAddress);
         
+        _progressIndicator.Hidden = false;
+        _progressIndicator.StartAnimation(this);
+        
+        _attachButton.Enabled = false;
+        _targetComboBox.Enabled = false;
+        _segmentedControl.Enabled = false;
+        
+        Settings.Default.Set($"Target.{_targetType.Name}.LastAddress", targetAddress);
+        
         target.Start((success, message) => {
+            _progressIndicator.Hidden = true;
+            _attachButton.Enabled = true;
+            _segmentedControl.Enabled = true;
+            _targetComboBox.Enabled = true;
+            _targetComboBox.BecomeFirstResponder();
+
             if (success) {
+                AddRecentItem(_targetType.Name, targetAddress);
+                
                 if (target.TitleId == "") {
                     alert.MessageText = "No game running";
                     alert.InformativeText = "You must run a game before attaching to the process.";
 
                     alert.RunSheetModal(Window);
                     
-                    _attachButton.Title = "Attach";
-
                     target.Stop();
                     
                     return;
@@ -237,12 +268,34 @@ public class AttachViewController: NSViewController {
     private Target CreateTargetInstance(string targetAddress) {
         return (Target)Activator.CreateInstance(_targetType, targetAddress)!;
     }
+
+    private List<string> GetRecentItems(string targetName) {
+        return Settings.Default.Get($"Target.{targetName}.RecentAddresses", new List<string>())!;
+    }
+
+    private void AddRecentItem(string targetName, string address) {
+        var recentItems = GetRecentItems(targetName);
+
+        if (recentItems.Contains(address)) {
+            recentItems.Remove(address);
+        }
+
+        recentItems.Insert(0, address);
+
+        if (recentItems.Count > 5) {
+            recentItems.RemoveAt(5);
+        }
+
+        Settings.Default.Set($"Target.{targetName}.RecentAddresses", recentItems);
+    }
 }
 
 public class AttachComboBox : NSComboBox, INSComboBoxDelegate, INSComboBoxDataSource {
     private List<string> _discoveredItems = [];
     private List<string> _recentItems = [];
     private List<ComboBoxItem> _allItems = [];
+    
+    private int _lastSelectedIndex = -1;
     
     public AttachComboBox() {
         UsesDataSource = true;
@@ -315,6 +368,35 @@ public class AttachComboBox : NSComboBox, INSComboBoxDelegate, INSComboBoxDataSo
         if (selectedIndex >= 0 && _allItems[(int)selectedIndex].IsSectionTitle) {
             comboBox.DeselectItem(selectedIndex);
         }
+        
+        _lastSelectedIndex = (int)selectedIndex;
+    }
+    
+    [Export("comboBoxSelectionDidChange:")]
+    public void SelectionDidChange(NSNotification notification) {
+        if (notification.Object is not NSComboBox comboBox) {
+            return;
+        }
+        
+        if (comboBox.SelectedIndex < 0) {
+            return;
+        }
+
+        var index = comboBox.SelectedIndex;
+        
+        if (_allItems[(int)comboBox.SelectedIndex].IsSectionTitle) {
+            comboBox.DeselectItem(index);
+            
+            if (_lastSelectedIndex < index && _allItems.Count > index) {
+                comboBox.SelectItem(index+1);
+            } else if (_lastSelectedIndex > index && index > 0) {
+                comboBox.SelectItem(index-1);
+            }
+        } else {
+           comboBox.SelectItem(index); 
+        }
+        
+        _lastSelectedIndex = (int)index;
     }
 }
 
