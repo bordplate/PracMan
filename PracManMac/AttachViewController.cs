@@ -5,7 +5,6 @@ using PracManCore.Target;
 
 namespace PracManMac;
 
-[Register("AttachWindowController")]
 public class AttachViewController: NSViewController {
     public readonly NSWindow Window;
     
@@ -15,7 +14,7 @@ public class AttachViewController: NSViewController {
     private readonly AttachComboBox _targetComboBox;
     private readonly NSButton _attachButton;
     
-    public AttachViewController() {
+    public AttachViewController() : base(null, null) {
         _targets.Add(typeof(Ratchetron));
         _targets.Add(typeof(RPCS3));
         _targets.Add(typeof(DummyTarget));
@@ -49,7 +48,12 @@ public class AttachViewController: NSViewController {
             ((AppDelegate)NSApplication.SharedApplication.Delegate).ActivateMenu();
         };
     }
-    
+
+    public override void LoadView() {
+        // If we don't include this, the application crashed on macOS <= 13.0 when we initialize the controller
+        View = new NSView();
+    }
+
     public override void ViewDidLoad() {
         base.ViewDidLoad();
         

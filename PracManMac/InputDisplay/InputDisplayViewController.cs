@@ -60,6 +60,11 @@ public class InputDisplayViewController : NSViewController, INSMenuDelegate {
         Window.ContentViewController = this;
         Window.TitlebarAppearsTransparent = false;
     }
+    
+    public override void LoadView() {
+        // If we don't include this, the application crashed on macOS <= 13.0 when we initialize the controller
+        View = new NSView();
+    }
 
     public override void ViewDidLoad() {
         base.ViewDidLoad();

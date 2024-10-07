@@ -69,6 +69,11 @@ public class ModuleWindowViewController: NSViewController, IWindow {
             }
         };
     }
+    
+    public override void LoadView() {
+        // If we don't include this, the application crashed on macOS <= 13.0 when we initialize the controller
+        View = new NSView();
+    }
 
     public bool Load() {
         // Settings ContentViewController starts the view loading process and class ViewDidLoad

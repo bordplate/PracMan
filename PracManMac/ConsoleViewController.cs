@@ -27,6 +27,11 @@ public class ConsoleViewController : NSViewController {
 
         Window.Center();
     }
+    
+    public override void LoadView() {
+        // If we don't include this, the application crashed on macOS <= 13.0 when we initialize the controller
+        View = new NSView();
+    }
 
     public override void ViewDidLoad() {
         base.ViewDidLoad();
