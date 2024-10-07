@@ -33,6 +33,9 @@
           <Link>Runtime\config.toml</Link>
         </ScriptsFolder>
         <ScriptsFolder Remove="..\Scripts\NPEA00385\Test\**" />
+        <ScriptsFolder Update="..\Scripts\Runtime\bit.lua">
+          <Link>Runtime\bit.lua</Link>
+        </ScriptsFolder>
     </ItemGroup>
     
     <Target Name="ThinLibLuaDylib" BeforeTargets="Build" Condition="'$(Configuration)' == 'Release'">

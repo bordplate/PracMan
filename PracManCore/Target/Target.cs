@@ -55,6 +55,10 @@ public abstract class Target {
     public abstract int GetCurrentPID();
     public abstract void WriteMemory(uint address, uint size, byte[] memory);
     
+    public void WriteUInt(uint address, UInt32 intValue) {
+        this.WriteMemory(address, 4, BitConverter.GetBytes((UInt32)intValue).Reverse().ToArray());
+    }
+    
     public virtual void WriteFloat(uint address, float floatValue) {
         this.WriteMemory(address, 4, BitConverter.GetBytes(floatValue).Reverse().ToArray());
     }

@@ -14,8 +14,37 @@ function TrainerWindow:OnLoad()
     self:SetTitle("Ratchet & Clank 1 (PAL)")
     
     AddMenu("Debug", function(menu)
-        menu:AddItem("Shoit", function()
-            Alert("Shoit")
+        menu:AddCheckItem("Update Ratchet", function(value)
+            self.game:SetDebugOption(DebugOption.UpdateRatchet, value)
+        end).Checked = true
+        
+        menu:AddCheckItem("Update Mobys", function(value)
+            self.game:SetDebugOption(DebugOption.UpdateMobys, value)
+        end).Checked = true
+        
+        menu:AddCheckItem("Update Particles", function(value)
+            self.game:SetDebugOption(DebugOption.UpdateParticles, value)
+        end).Checked = true
+        
+        menu:AddSeparator()
+        
+        normalCam = menu:AddCheckItem("Normal camera", function(value)
+            self.game:SetDebugOption(DebugOption.NormalCamera, value)
+            freeCam.Checked = false
+            freeCamCharacter.Checked = false
+        end)
+        normalCam.Checked = true
+        
+        freeCam = menu:AddCheckItem("Free camera", function(value)
+            self.game:SetDebugOption(DebugOption.Freecam, value)
+            normalCam.Checked = false
+            freeCamCharacter.Checked = false
+        end)
+        
+        freeCamCharacter = menu:AddCheckItem("Free camera character", function(value)
+            self.game:SetDebugOption(DebugOption.FreecamCharacter, value)
+            normalCam.Checked = false
+            freeCam.Checked = false
         end)
     end)
     
@@ -55,10 +84,8 @@ function TrainerWindow:OnLoad()
             end)
         end)
         
-        resetLevelFlagsCheck = column:AddCheckbox("Reset Level Flags", function(value)
-        end)
-        resetGoldBoltsCheck = column:AddCheckbox("Reset Gold Bolts", function(value)
-        end)
+        resetLevelFlagsCheck = column:AddCheckbox("Reset Level Flags", function(value) end)
+        resetGoldBoltsCheck = column:AddCheckbox("Reset Gold Bolts", function(value) end)
         
         column:AddButton("Unlocks", function()
             if self.unlocksWindow == nil then
@@ -114,6 +141,7 @@ function TrainerWindow:OnLoad()
         end)
         
         column:AddCheckbox("Infinite Health", function(value)
+            self.game:SetInfinieHealth(value)
         end)
 
         column:AddCheckbox("Ghost Ratchet", function(value)
@@ -130,6 +158,7 @@ function TrainerWindow:OnLoad()
         end)
         
         column:AddCheckbox("Freeze Ammo", function(value)
+            self.game:SetInfiniteAmmo(value)
         end)
     end)
 end 

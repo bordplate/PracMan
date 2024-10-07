@@ -17,9 +17,6 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
     private Dictionary<Target, ModLoaderViewController> _modLoaders = new();
 
     public AppDelegate() {
-        WindowsMenu = CreateWindowMenuItem();
-        HelpMenu = CreateHelpMenuItem();
-        
         Application.Delegate = this;
         
         // If args contain "--debug", we don't install or upgrade the user files and we set the current path to the Resources/User directory
@@ -28,6 +25,9 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
         } else {
             InstallOrUpgradeUserFiles();
         }
+        
+        WindowsMenu = CreateWindowMenuItem();
+        HelpMenu = CreateHelpMenuItem();
         
         AttachViewController = new();
     }
@@ -116,6 +116,10 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
         var aboutTitle = $"About {NSProcessInfo.ProcessInfo.ProcessName}";
         var aboutMenuItem = new NSMenuItem(aboutTitle, new ObjCRuntime.Selector("orderFrontStandardAboutPanel:"), "");
         appMenu.AddItem(aboutMenuItem);
+        
+        // "Check for updates" menu item
+        var checkForUpdatesMenuItem = new NSMenuItem("Check for updates...", new ObjCRuntime.Selector("checkForUpdates:"), "");
+        appMenu.AddItem(checkForUpdatesMenuItem);
 
         // Separator
         appMenu.AddItem(NSMenuItem.SeparatorItem);
