@@ -99,7 +99,7 @@ function TrainerWindow:OnLoad()
     self:AddColumn(function(column)
         column:AddLabel("Bolt count:")
         
-        column:AddTextField(function(value)
+        column:AddStepper(-INT_MAX, INT_MAX, 100, function(value)
             local count = tonumber(value)
 
             if count == nil then
