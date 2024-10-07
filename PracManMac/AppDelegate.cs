@@ -7,7 +7,7 @@ namespace PracManMac;
 
 [Register("AppDelegate")]
 public class AppDelegate : NSApplicationDelegate, IApplication {
-    public AttachViewController AttachViewController = new();
+    public AttachViewController AttachViewController;
     private ConsoleViewController? _consoleViewController;
 
     public NSMenu MainMenu = new();
@@ -28,6 +28,8 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
         } else {
             InstallOrUpgradeUserFiles();
         }
+        
+        AttachViewController = new();
     }
 
     public void InstallOrUpgradeUserFiles() {
@@ -59,14 +61,14 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
         
         NSFileManager.DefaultManager.ChangeCurrentDirectory(userFilesPath);
         
-        var installedVersion = Settings.Default.Get("Version", "0.0", false)!;
+        var installedVersion = Settings.Default.Get("General.Version", "0.0", false)!;
         
         // If the installed version is less than the current version, we need to upgrade or install the user files
         if (new Version(installedVersion) < new Version(currentVersion)) {
             InstallFilesFromResource(Path.Combine(resourcePath, "User", "controllerskins"), Path.Combine(userFilesPath, "controllerskins"));
             InstallFilesFromResource(Path.Combine(resourcePath, "User", "Scripts"), Path.Combine(userFilesPath, "Scripts"));
             
-            Settings.Default.Set("Version", currentVersion);
+            Settings.Default.Set("General.Version", currentVersion);
         }
     }
     
