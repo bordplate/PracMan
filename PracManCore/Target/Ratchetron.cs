@@ -293,7 +293,12 @@ public class Ratchetron(string ip) : Target(ip) {
         IPEndPoint end = new IPEndPoint(IPAddress.Any, 0);
 
         while (_connected) {
-            try {
+            try { 
+                if (_udpClient.Available == 0) {
+                    Thread.Sleep(1);
+                    continue;
+                }
+                
                 byte[] cmdBuf = _udpClient.Receive(ref end);
                 byte command = cmdBuf.Take(1).ToArray()[0];
 
