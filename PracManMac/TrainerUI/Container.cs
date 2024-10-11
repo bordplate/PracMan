@@ -63,18 +63,20 @@ public abstract class Container(IWindow window) : NSStackView, IContainer {
         return checkbox;
     }
 
-    public IContainer AddRow(LuaFunction callback) {
+    public IContainer AddRow(LuaFunction? callback = null) {
         var row = new Row(Window);
         AddArrangedSubview(row);
         
         ConstrainElement(row);
-        
-        ModuleDelegate.TryInvoke(window, callback, row);
-        
+
+        if (callback != null) {
+            ModuleDelegate.TryInvoke(window, callback, row);
+        }
+
         return row;
     }
     
-    public IContainer AddColumn(LuaFunction callback) {
+    public IContainer AddColumn(LuaFunction? callback = null) {
         var column = new Column(Window);
         AddArrangedSubview(column);
         
@@ -83,9 +85,11 @@ public abstract class Container(IWindow window) : NSStackView, IContainer {
         // Make column fill from top to bottom
         AddConstraints(NSLayoutConstraint.FromVisualFormat("V:|-10-[column]-10-|", NSLayoutFormatOptions.None, 
             null, new NSDictionary("column", column)));
-        
-        ModuleDelegate.TryInvoke(window, callback, column);
-        
+
+        if (callback != null) {
+            ModuleDelegate.TryInvoke(window, callback, column);
+        }
+
         return column;
     }
     

@@ -13,4 +13,8 @@ public class Label: NSTextField, ILabel {
         DrawsBackground = false;
         Bordered = false;
     }
+
+    public void SetText(string text) {
+        StringValue = text;
+    }
 }

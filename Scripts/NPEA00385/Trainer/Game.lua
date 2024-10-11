@@ -297,17 +297,6 @@ function Game:SetupAllMissions()
     Alert("Blarg bridge and rilgar race reset for any% all missions. Good luck!")
 end 
 
---          public enum DebugOption
---        {
---            UpdateRatchet, 
---            UpdateMobys,
---            UpdateParticles,
---            UpdateCamera,
---            NormalCamera,
---            Freecam,
---            FreecamCharacter
---        }
-
 DebugOption = {
     UpdateRatchet = 1,
     UpdateMobys = 2,
@@ -317,46 +306,6 @@ DebugOption = {
     Freecam = 6,
     FreecamCharacter = 7
 }
-
---          public List<DebugOption> DebugOptions()
---        {
---            List<DebugOption> options = new List<DebugOption>();
---
---            uint debugUpdateOptions = BitConverter.ToUInt32(api.ReadMemory(pid, addr.debugUpdateOptions, 4).Reverse().ToArray(), 0);
---            uint debugModeControl = BitConverter.ToUInt32(api.ReadMemory(pid, addr.debugModeControl, 4).Reverse().ToArray(), 0);
---
---            if ((debugUpdateOptions & 1) > 0)
---            {
---                options.Add(DebugOption.UpdateRatchet);
---            }
---
---            if ((debugUpdateOptions & 2) > 0)
---            {
---                options.Add(DebugOption.UpdateMobys);
---            }
---
---            if ((debugUpdateOptions & 4) > 0)
---            {
---                options.Add(DebugOption.UpdateParticles);
---            }
---
---            if (debugModeControl == 0)
---            {
---                options.Add(DebugOption.NormalCamera);
---            }
---
---            if (debugModeControl == 1)
---            {
---                options.Add(DebugOption.Freecam);
---            }
---
---            if (debugModeControl == 2)
---            {
---                options.Add(DebugOption.FreecamCharacter);
---            }
---
---            return options;
---        }
 
 function Game:DebugOptions()
     local options = {}
@@ -390,40 +339,6 @@ function Game:DebugOptions()
     
     return options
 end
-
---        public void SetDebugOption(DebugOption option, bool value)
---        {
---            uint debugUpdateOptions = BitConverter.ToUInt32(api.ReadMemory(pid, addr.debugUpdateOptions, 4).Reverse().ToArray(), 0);
---
---            switch (option)
---            {
---                case DebugOption.UpdateRatchet:
---                    api.WriteMemory(pid, addr.debugUpdateOptions, (value ? debugUpdateOptions | 1 : debugUpdateOptions ^ 1));
---                    break;
---                case DebugOption.UpdateMobys:
---                    api.WriteMemory(pid, addr.debugUpdateOptions, (value ? debugUpdateOptions | 2 : debugUpdateOptions ^ 2));
---                    break;
---                case DebugOption.UpdateParticles:
---                    api.WriteMemory(pid, addr.debugUpdateOptions, (value ? debugUpdateOptions | 4 : debugUpdateOptions ^ 4));
---                    break;
---                case DebugOption.UpdateCamera:
---                    api.WriteMemory(pid, addr.debugUpdateOptions, (value ? debugUpdateOptions | 8 : debugUpdateOptions ^ 8));
---                    break;
---
---                case DebugOption.NormalCamera:
---                    SetDebugOption(DebugOption.UpdateCamera, true);
---                    api.WriteMemory(pid, addr.debugModeControl, 0);
---                    break;
---                case DebugOption.Freecam:
---                    SetDebugOption(DebugOption.UpdateCamera, false);
---                    api.WriteMemory(pid, addr.debugModeControl, 1);
---                    break;
---                case DebugOption.FreecamCharacter:
---                    SetDebugOption(DebugOption.UpdateCamera, false);
---                    api.WriteMemory(pid, addr.debugModeControl, 2);
---                    break;
---            }
---        }
 
 function Game:SetDebugOption(option, value)
     local debugUpdateOptions = Target:ReadUInt(self.address.debugUpdateOptions)

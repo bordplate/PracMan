@@ -77,7 +77,7 @@ function TrainerWindow:OnLoad()
                 selectedPlanet = index
             end)
             
-            dropdown:SetSelectedIndex(self.game:GetCurrentPlanet())
+            dropdown:SetSelectedIndex(self.game:GetCurrentPlanet(), true)
             
             row:AddButton("Load", function()
                 self.game:LoadPlanet(selectedPlanet, resetLevelFlagsCheck:IsChecked(), resetGoldBoltsCheck:IsChecked())

@@ -25,16 +25,16 @@ public class Dropdown: NSPopUpButton, IDropdown {
         Target = this;
         Action = new ObjCRuntime.Selector("dropdownDidChange:");
 
-        try {
-            _callback.Call(1, _items.Values.First());
-        } catch (LuaScriptException exception) {
-            Console.Error.WriteLine(exception.Message);
-            new NSAlert {
-                AlertStyle = NSAlertStyle.Critical,
-                InformativeText = exception.Message,
-                MessageText = "Error",
-            }.RunSheetModal(((ModuleWindowViewController)Window).Window);
-        }
+        // try {
+        //     _callback.Call(1, _items.Values.First());
+        // } catch (LuaScriptException exception) {
+        //     Console.Error.WriteLine(exception.Message);
+        //     new NSAlert {
+        //         AlertStyle = NSAlertStyle.Critical,
+        //         InformativeText = exception.Message,
+        //         MessageText = "Error",
+        //     }.RunSheetModal(((ModuleWindowViewController)Window).Window);
+        // }
     }
 
     public Dictionary<int, string> GetItemsFromLuaTable(LuaTable options) {
@@ -47,7 +47,10 @@ public class Dropdown: NSPopUpButton, IDropdown {
                     items.Add((int)index, value);                    
                 }
             } else {
-                items.Add((int)(long)key, (string)options[key]);
+                var itemValue = options[key];
+                if (itemValue != null) {
+                    items.Add((int)(long)key, itemValue.ToString()!);
+                }
             }
         }
 
@@ -68,14 +71,16 @@ public class Dropdown: NSPopUpButton, IDropdown {
         SetTitle(_items.Values.FirstOrDefault() ?? "");
     }
     
-    public void SetSelectedIndex(int index) {
-        if (index < 0 || index >= _items.Count || !_items.ContainsKey(index)) {
+    public void SetSelectedIndex(int index, bool callingCallback = false) {
+        if (index < 0 || index > _items.Count || !_items.ContainsKey(index)) {
             SetTitle("");
             return;
         }
         
         SetTitle(_items[index]);
 
+        if (!callingCallback) return;
+        
         try {
             _callback.Call(index, _items[index]);
         } catch (LuaScriptException exception) {

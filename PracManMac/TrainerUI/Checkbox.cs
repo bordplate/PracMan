@@ -9,6 +9,11 @@ public class Checkbox: NSButton, ICheckbox {
     
     LuaFunction _callback;
     
+    public bool Checked {
+        get => IsChecked();
+        set => SetChecked(value);
+    }
+    
     public Checkbox(IWindow window, string text, LuaFunction callback) {
         Window = window;
         Title = text;
@@ -36,9 +41,22 @@ public class Checkbox: NSButton, ICheckbox {
         }
     }
 
-    public void SetChecked(bool isChecked) {
+    public void SetChecked(bool isChecked, bool callingCallback = false) {
         // These should be NSControlStateValue, but they don't work in MAUI for some reason
         State = isChecked ? NSCellStateValue.On : NSCellStateValue.Off;
+        
+        if (callingCallback) {
+            try {
+                _callback.Call(isChecked);
+            } catch (LuaScriptException exception) {
+                Console.Error.WriteLine(exception.Message);
+                new NSAlert {
+                    AlertStyle = NSAlertStyle.Critical,
+                    InformativeText = exception.Message,
+                    MessageText = "Error",
+                }.RunSheetModal(((ModuleWindowViewController)Window).Window);
+            }
+        }
     }
 
     public bool IsChecked() {

@@ -56,19 +56,23 @@ public abstract class Target {
     public abstract void WriteMemory(uint address, uint size, byte[] memory);
     
     public void WriteUInt(uint address, UInt32 intValue) {
-        this.WriteMemory(address, 4, BitConverter.GetBytes((UInt32)intValue).Reverse().ToArray());
+        WriteMemory(address, 4, BitConverter.GetBytes(intValue).Reverse().ToArray());
     }
     
     public virtual void WriteFloat(uint address, float floatValue) {
-        this.WriteMemory(address, 4, BitConverter.GetBytes(floatValue).Reverse().ToArray());
+        WriteMemory(address, 4, BitConverter.GetBytes(floatValue).Reverse().ToArray());
+    }
+    
+    public virtual void WriteShort(uint address, short shortValue) {
+        WriteMemory(address, 2, BitConverter.GetBytes(shortValue).Reverse().ToArray());
     }
     
     public virtual void WriteByte(uint address, byte byteValue) {
-        this.WriteMemory(address, 1, new byte[] { byteValue });
+        WriteMemory(address, 1, [ byteValue ]);
     }
 
     public virtual void WriteMemory(uint address, UInt32 intValue) {
-        this.WriteMemory(address, 4, BitConverter.GetBytes((UInt32)intValue).Reverse().ToArray());
+        WriteMemory(address, 4, BitConverter.GetBytes(intValue).Reverse().ToArray());
     }
 
     public virtual void WriteMemory(uint address, uint size, string memory) {
@@ -81,11 +85,11 @@ public abstract class Target {
     }
 
     public void WriteMemory(uint address, byte[] memory) {
-        this.WriteMemory(address, (uint)memory.Length, memory);
+        WriteMemory(address, (uint)memory.Length, memory);
     }
     
     public void Memset(uint address, uint size, byte value) {
-        this.WriteMemory(address, size, Enumerable.Repeat(value, (int)size).ToArray());
+        WriteMemory(address, size, Enumerable.Repeat(value, (int)size).ToArray());
     }
 
     public abstract byte[] ReadMemory(uint address, uint size);
@@ -155,13 +159,18 @@ public abstract class Target {
     public abstract int FreezeMemory(uint address, uint size, MemoryCondition condition, byte[] memory);
 
     public virtual int FreezeMemory(uint address, MemoryCondition condition, UInt32 intValue) {
-        return this.FreezeMemory(address, 4, condition,
-            BitConverter.GetBytes((UInt32)intValue).Reverse().ToArray());
+        return FreezeMemory(address, 4, condition,
+            BitConverter.GetBytes(intValue).Reverse().ToArray());
+    }
+    
+    public virtual int FreezeMemory(uint address, byte condition, UInt32 intValue) {
+        return FreezeMemory(address, 4, (MemoryCondition)condition,
+            BitConverter.GetBytes(intValue).Reverse().ToArray());
     }
 
     public virtual int FreezeMemory(uint address, UInt32 intValue) {
-        return this.FreezeMemory(address, 4, MemoryCondition.Any,
-            BitConverter.GetBytes((UInt32)intValue).Reverse().ToArray());
+        return FreezeMemory(address, 4, MemoryCondition.Any,
+            BitConverter.GetBytes(intValue).Reverse().ToArray());
     }
 
     public abstract void ReleaseSubID(int memSubID);

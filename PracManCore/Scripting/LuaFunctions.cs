@@ -16,6 +16,7 @@ public class LuaFunctions {
             ["BytesToFloat"] = ByteArrayToFloat,
             ["BytesToInt"] = ByteArrayToInt,
             ["Memset"] = Memset,
+            ["TableToByteArray"] = LuaTableToByteArray,
 
             // Legacy functions
             ["bytestoint"] = Legacy_ByteArrayToInt,

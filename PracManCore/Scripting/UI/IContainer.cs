@@ -4,8 +4,8 @@ using NLua;
 
 public interface IContainer: IControl {
     public IWindow Window { get; set; }
-    public IContainer AddRow(LuaFunction callback);
-    public IContainer AddColumn(LuaFunction callback);
+    public IContainer AddRow(LuaFunction? callback = null);
+    public IContainer AddColumn(LuaFunction? callback = null);
     public ISpacer AddSpacer();
     public ILabel AddLabel(string text);
     public IButton AddButton(string title, LuaFunction callback);

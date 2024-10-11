@@ -50,7 +50,7 @@ public class DummyTarget(string title): Target(title) {
     }
 
     public override void Notify(string message) {
-        
+        Application.Delegate?.Alert("Notification", message);
     }
 
     public override int SubMemory(uint address, uint size, MemoryCondition condition, byte[] memory, Action<byte[]> callback) {
