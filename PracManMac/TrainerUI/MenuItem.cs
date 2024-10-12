@@ -66,7 +66,7 @@ public class MenuItem: NSMenuItem, IMenuItem {
                 AlertStyle = NSAlertStyle.Critical,
                 InformativeText = exception.Message,
                 MessageText = "Error",
-            }.RunSheetModal(((ModuleWindowViewController)Window).Window);
+            }.RunModal();
         }
     }
 }

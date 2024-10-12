@@ -225,8 +225,10 @@ public class RPCS3(string slot) : Target(slot) {
                 bool hitConditional = false;
                 byte[] currentValue = ReadMemory(item.Address, item.Size);
                 
-                int setValueInt = BitConverter.ToInt32(item.SetValue.Reverse().ToArray(), 0);
-                int currentValueInt = BitConverter.ToInt32(currentValue.Reverse().ToArray(), 0);
+                int setValueInt = 0;
+                if (item.SetValue.Length == 4) setValueInt = BitConverter.ToInt32(item.SetValue.Reverse().ToArray(), 0);
+                int currentValueInt = 0;
+                if (currentValue.Length == 4) currentValueInt = BitConverter.ToInt32(currentValue.Reverse().ToArray(), 0);
 
                 if (item.Condition == MemoryCondition.Any) {
                     hitConditional = true;

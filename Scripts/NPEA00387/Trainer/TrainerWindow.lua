@@ -1,5 +1,6 @@
 require 'Game'
 require 'UnlocksWindow'
+require 'FlagViewWindow'
 
 TrainerWindow = class("TrainerWindow", BaseWindow)
 
@@ -11,10 +12,24 @@ function TrainerWindow:initialize()
     self:Show()
     
     self.unlocksWindow = nil
+    self.flagViewWindow = nil
 end
 
 function TrainerWindow:OnLoad()
     self:SetTitle("Ratchet & Clank 3 (PAL)")
+    
+    AddMenu("Trainer", function(menu)
+        menu:AddItem("Level flag viewer...", function()
+            if self.flagViewWindow == nil then
+                self.flagViewWindow = FlagViewWindow(self.game, self.game:GetCurrentPlanet(), 0x10)
+            elseif self.flagViewWindow.level ~= self.game:GetCurrentPlanet() then
+                self.flagViewWindow:Close()
+                self.flagViewWindow = FlagViewWindow(self.game, self.game:GetCurrentPlanet(), 0x10)
+            end
+            
+            self.flagViewWindow:Show()
+        end)
+    end)
     
     self:AddColumn(function(column)
         column:AddRow(function(row)
@@ -155,7 +170,7 @@ function TrainerWindow:OnLoad()
                 self.unlocksWindow:Show()
             end)
             row:AddButton("Setup NG+ or No QE File", function()
-                -- TODO: Implement
+                self.game:SetupNoQEFile()
             end)
         end)
         
@@ -200,7 +215,7 @@ function TrainerWindow:OnLoad()
             "Alpha Combat Suit", "Magnaplate Armor", "Adamantine Armor", "Aegis Mark V Armor", "Infernox Armor", 
             "OG Ratchet Skin", "Snowman Skin", "Tux Skin",
         }, function(index, value)
-            
+            self.game:SetArmor(index-1)
         end)
         
         column:AddButton("Unlock All Titanium Bolts", function()
@@ -238,7 +253,7 @@ function TrainerWindow:OnLoad()
             "Pulsing Purple", "Low Rider", "Black Hole", "Sun Storm", "Sasha Scarlet", "Florana Breeze", "Ozzy Kamikaze",
         }, function(index, value)
             self.game:SetShipColor(index-1)
-            Target:Notify("Ship color set to " .. value)
+            Target:Notify("Reload the planet to see the changes to the ship color")
         end)
         
         column:AddSpacer()

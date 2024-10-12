@@ -133,6 +133,17 @@ public class ModuleWindowViewController: NSViewController, IWindow {
 
     public void Close() {
         Window.Close();
+        
+        try {
+            (_luaContext["OnClose"] as LuaFunction)?.Call([_luaContext]);
+        } catch (LuaScriptException exception) {
+            Console.Error.WriteLine(exception.Message);
+            new NSAlert {
+                AlertStyle = NSAlertStyle.Critical,
+                InformativeText = exception.Message,
+                MessageText = "Error",
+            }.RunSheetModal(Window);
+        }
     }
     
     public void SetTitle(string title) {
