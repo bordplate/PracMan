@@ -11,9 +11,7 @@
         <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-        <PublishAot>true</PublishAot>
         <UseHardenedRuntime>true</UseHardenedRuntime>
-        <PublishReadyToRun>true</PublishReadyToRun>
         <RuntimeIdentifiers>osx-x64;osx-arm64</RuntimeIdentifiers>
         <EnableCodeSigning>true</EnableCodeSigning>
         <CodesignKey>Developer ID Application: Vetle Hjelle (NLX8KMYWCN)</CodesignKey>
