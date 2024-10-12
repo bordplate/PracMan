@@ -35,6 +35,10 @@
           <Link>Runtime\bit.lua</Link>
         </ScriptsFolder>
     </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="NetSparkleUpdater.SparkleUpdater" Version="3.0.0-preview20240915001" />
+    </ItemGroup>
     
     <Target Name="ThinLibLuaDylib" BeforeTargets="Build" Condition="'$(Configuration)' == 'Release'">
         <!-- Thin the x64 liblua54.dylib to only include x86_64 -->

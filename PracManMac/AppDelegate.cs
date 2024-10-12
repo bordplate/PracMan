@@ -1,3 +1,8 @@
+using NetSparkleUpdater;
+using NetSparkleUpdater.Configurations;
+using NetSparkleUpdater.Enums;
+using NetSparkleUpdater.Interfaces;
+using NetSparkleUpdater.SignatureVerifiers;
 using PracManCore;
 using PracManCore.Scripting;
 using PracManCore.Scripting.Exceptions;
@@ -6,13 +11,15 @@ using PracManCore.Target;
 namespace PracManMac;
 
 [Register("AppDelegate")]
-public class AppDelegate : NSApplicationDelegate, IApplication {
+public class AppDelegate : NSApplicationDelegate, IApplication, IAssemblyAccessor {
     public AttachViewController AttachViewController;
     private ConsoleViewController? _consoleViewController;
 
     public NSMenu MainMenu = new();
     public NSMenuItem WindowsMenu;
     public NSMenuItem HelpMenu;
+
+    public SparkleUpdater? Updater;
     
     private Dictionary<Target, ModLoaderViewController> _modLoaders = new();
 
@@ -25,6 +32,32 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
         } else {
             InstallOrUpgradeUserFiles();
         }
+
+#if !DEBUG
+        Updater = new SparkleUpdater("https://boltcrate.space/pracman/appcast.xml",
+            new Ed25519Checker(SecurityMode.OnlyVerifySoftwareDownloads, "pGTjUePbKNK/SriKpIJg3gstPuZm7GPGfatzV2qG3Ao=")) {
+            UIFactory = new UpdaterUIFactory(),
+            RelaunchAfterUpdate = true,
+            RestartExecutablePath = Directory.GetParent(NSBundle.MainBundle.BundlePath)!.ToString(),
+            RelaunchAfterUpdateCommandPrefix = "open ",
+            RestartExecutableName = "PracMan.app",
+            Configuration = new DefaultConfiguration(this),
+        };
+        
+        Updater.CloseApplication += () => {
+            Console.WriteLine("Closing application");
+            NSApplication.SharedApplication.Terminate(this);
+        };
+
+        Updater.CheckServerFileName = false;
+        Updater.StartLoop(true, true);
+        
+        var automaticUpdates = Settings.Default.Get("General.AutomaticallyDownloadUpdates", false)!;
+        var skipVersion = Settings.Default.Get("General.SkipVersion", "0.0")!;
+        
+        Updater.UserInteractionMode = automaticUpdates ? UserInteractionMode.DownloadAndInstall : UserInteractionMode.NotSilent;
+        Updater.Configuration.SetVersionToSkip(skipVersion);
+#endif
         
         WindowsMenu = CreateWindowMenuItem();
         HelpMenu = CreateHelpMenuItem();
@@ -121,6 +154,13 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
         // "Check for updates" menu item
         var checkForUpdatesMenuItem = new NSMenuItem("Check for updates...", new ObjCRuntime.Selector("checkForUpdates:"), "");
         appMenu.AddItem(checkForUpdatesMenuItem);
+        
+        // Enable automatic updates menu item
+        var automaticUpdatesMenuItem = new NSMenuItem("Automatic updates", new ObjCRuntime.Selector("enableAutomaticUpdates:"), "");
+        appMenu.AddItem(automaticUpdatesMenuItem);
+        if (Settings.Default.Get("General.AutomaticallyDownloadUpdates", false)!) {
+            automaticUpdatesMenuItem.State = NSCellStateValue.On;
+        }
 
         // Separator
         appMenu.AddItem(NSMenuItem.SeparatorItem);
@@ -324,4 +364,29 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
     public void RunOnMainThread(Action action) {
         NSApplication.SharedApplication.InvokeOnMainThread(action);
     }
+    
+    [Export("checkForUpdates:")]
+    public void CheckForUpdates(NSObject sender) {
+        Updater?.CheckForUpdatesAtUserRequest();
+    }
+    
+    [Export("enableAutomaticUpdates:")]
+    public void EnableAutomaticUpdates(NSObject sender) {
+        var menuItem = (NSMenuItem)sender;
+        
+        if (menuItem.State == NSCellStateValue.On) {
+            menuItem.State = NSCellStateValue.Off;
+            Settings.Default.Set("General.AutomaticallyDownloadUpdates", false);
+        } else {
+            menuItem.State = NSCellStateValue.On;
+            Settings.Default.Set("General.AutomaticallyDownloadUpdates", true);
+        }
+    }
+
+    public string AssemblyCompany => NSBundle.MainBundle.InfoDictionary["NSHumanReadableCopyright"].ToString();
+    public string AssemblyCopyright => NSBundle.MainBundle.InfoDictionary["NSHumanReadableCopyright"].ToString();
+    public string AssemblyDescription => "";
+    public string AssemblyTitle => NSBundle.MainBundle.InfoDictionary["CFBundleName"].ToString();
+    public string AssemblyProduct => NSBundle.MainBundle.InfoDictionary["CFBundleName"].ToString();
+    public string AssemblyVersion => NSBundle.MainBundle.InfoDictionary["CFBundleShortVersionString"].ToString();
 }
