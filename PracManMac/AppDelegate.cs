@@ -79,8 +79,9 @@ public class AppDelegate : NSApplicationDelegate, IApplication {
             
             if (!File.Exists(destinationFilePath)) {
                 Directory.CreateDirectory(Path.GetDirectoryName(destinationFilePath)!);
-                File.Copy(file, destinationFilePath);
             }
+            
+            File.Copy(file, destinationFilePath, true);
         }
     }
     
