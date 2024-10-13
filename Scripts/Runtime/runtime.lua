@@ -11,3 +11,14 @@ function table.contains(table, element)
     end
     return false
 end
+
+
+-- Used for memory subscriptions and memory freezing
+MemoryCondition = {
+    Any = 1,
+    Changed = 2,
+    Above = 3,
+    Below = 4,
+    Equal = 5,
+    NotEqual = 6
+}
