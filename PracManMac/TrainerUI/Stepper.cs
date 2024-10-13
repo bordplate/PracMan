@@ -12,7 +12,7 @@ public class Stepper: NSView, IStepper {
     
     private readonly LuaFunction _callback;
 
-    public Stepper(IWindow window, int minValue, int maxValue, int step, LuaFunction callback) {
+    public Stepper(IWindow window, long minValue, long maxValue, int step, LuaFunction callback) {
         Window = window;
         _callback = callback;
         
@@ -66,16 +66,20 @@ public class Stepper: NSView, IStepper {
         _textField.StringValue = value.ToString();
         _stepper.IntValue = value;
     }
+    
+    public int GetValue() {
+        return _stepper.IntValue;
+    }
 }
 
 public class NumberFormatter : NSNumberFormatter {
     private NSString _lastValidString = new NSString("");
     
-    public NumberFormatter(int minValue, int maxValue) {
+    public NumberFormatter(long minValue, long maxValue) {
         FormatterBehavior = NSNumberFormatterBehavior.Version_10_4;
         NumberStyle = NSNumberFormatterStyle.None;
-        Minimum = NSNumber.FromInt32(minValue);
-        Maximum = NSNumber.FromInt32(maxValue);
+        Minimum = NSNumber.FromInt64(minValue);
+        Maximum = NSNumber.FromInt64(maxValue);
         PartialStringValidationEnabled = false;
     }
     
@@ -93,7 +97,7 @@ public class NumberFormatter : NSNumberFormatter {
             return false;
         }
         
-        if (value < Minimum!.Int32Value || value > Maximum!.Int32Value) {
+        if (value < Minimum!.Int64Value || value > Maximum!.Int64Value) {
             newString = _lastValidString;
             
             return false;

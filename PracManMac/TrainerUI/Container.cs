@@ -102,7 +102,7 @@ public abstract class Container(IWindow window) : NSStackView, IContainer {
         return spacer;
     }
     
-    public IStepper AddStepper(int minValue, int maxValue, int step, LuaFunction callback) {
+    public IStepper AddStepper(long minValue, long maxValue, int step, LuaFunction callback) {
         var stepper = new Stepper(Window, minValue, maxValue, step, callback);
         AddArrangedSubview(stepper);
         

@@ -11,7 +11,7 @@ public interface IContainer: IControl {
     public IButton AddButton(string title, LuaFunction callback);
     public ITextField AddTextField(LuaFunction callback);
     public ITextArea AddTextArea(int rows);
-    public IStepper AddStepper(int minValue, int maxValue, int step, LuaFunction callback);
+    public IStepper AddStepper(long minValue, long maxValue, int step, LuaFunction callback);
     public IDropdown AddDropdown(LuaTable items, LuaFunction callback);
     public ICheckbox AddCheckbox(string text, LuaFunction callback);
 }
