@@ -55,6 +55,10 @@ public abstract class Target {
     public abstract int GetCurrentPID();
     public abstract void WriteMemory(uint address, uint size, byte[] memory);
     
+    public void WriteInt(uint address, int intValue) {
+        WriteMemory(address, (uint)intValue);
+    }
+    
     public void WriteUInt(uint address, UInt32 intValue) {
         WriteMemory(address, 4, BitConverter.GetBytes(intValue).Reverse().ToArray());
     }
@@ -171,6 +175,10 @@ public abstract class Target {
     public virtual int FreezeMemory(uint address, UInt32 intValue) {
         return FreezeMemory(address, 4, MemoryCondition.Any,
             BitConverter.GetBytes(intValue).Reverse().ToArray());
+    }
+    
+    public int FreezeByte(uint address, byte condition, byte byteValue) {
+        return FreezeMemory(address, 1, (MemoryCondition)condition, [ byteValue ]);
     }
 
     public abstract void ReleaseSubID(int memSubID);
