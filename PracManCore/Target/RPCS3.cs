@@ -227,8 +227,13 @@ public class RPCS3(string slot) : Target(slot) {
                 
                 int setValueInt = 0;
                 if (item.SetValue.Length == 4) setValueInt = BitConverter.ToInt32(item.SetValue.Reverse().ToArray(), 0);
+                if (item.SetValue.Length == 2) setValueInt = BitConverter.ToInt16(item.SetValue.Reverse().ToArray(), 0);
+                if (item.SetValue.Length == 1) setValueInt = item.SetValue[0];
+                
                 int currentValueInt = 0;
                 if (currentValue.Length == 4) currentValueInt = BitConverter.ToInt32(currentValue.Reverse().ToArray(), 0);
+                if (currentValue.Length == 2) currentValueInt = BitConverter.ToInt16(currentValue.Reverse().ToArray(), 0);
+                if (currentValue.Length == 1) currentValueInt = currentValue[0];
 
                 if (item.Condition == MemoryCondition.Any) {
                     hitConditional = true;
