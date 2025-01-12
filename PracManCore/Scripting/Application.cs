@@ -22,7 +22,7 @@ public static class Application {
     
     public static string GetModulesRoot() {
         var rootDir = Directory.GetCurrentDirectory();
-        
+
         return Path.Combine(rootDir, "Scripts");
     }
     

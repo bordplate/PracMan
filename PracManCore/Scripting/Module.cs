@@ -86,6 +86,7 @@ public class Module(string title, string path) {
                 _state.DoString(entryFile, entry);
                 (_state["OnLoad"] as LuaFunction)?.Call();
             } catch (LuaScriptException exception) {
+                throw new ScriptException(exception.Message);
                 Exit();
                 throw new ScriptException(exception.Message);
             }
@@ -119,7 +120,7 @@ public class Module(string title, string path) {
         }
         
         // Set package path to the runtime folder and the module's folder
-        state.DoString($"package.path = package.path .. ';{Application.GetModulesRoot()}/Runtime/?.lua;{Path}/?.lua'", "set package path");
+        state.DoString($"package.path = package.path .. ';{Application.GetModulesRoot().Replace('\\', '/')}/Runtime/?.lua;{Path.Replace('\\', '/')}/?.lua'", "set package path");
         
         var functions = new LuaFunctions(_target);
         foreach (var (key, value) in functions.Functions) {
