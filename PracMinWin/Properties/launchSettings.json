@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "PracMinWin (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "PracMinWin (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
